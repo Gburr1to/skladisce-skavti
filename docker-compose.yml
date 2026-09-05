@@ -1,0 +1,32 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: skladisce_backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - MONGO_URI=${MONGO_URI}
+      - NODE_ENV=production
+    env_file:
+      - .env
+
+  # Neobvezno: za lokalno poganjanje frontenda v Dockerju med razvojem.
+  # Za produkcijo bo frontend objavljen na Vercel / Cloudflare Pages brez Dockerja.
+  frontend:
+    image: node:20-alpine
+    container_name: skladisce_frontend
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5000:5000"
+    environment:
+      - VITE_API_URL=http://localhost:3000
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    depends_on:
+      - backend

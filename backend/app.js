@@ -1,0 +1,81 @@
+var createError = require('http-errors');
+var express = require('express');
+var path = require('path');
+var logger = require('morgan');
+const connectDB = require('./config/db');
+const swaggerDocs = require('./config/swagger');
+const swaggerUi = require('swagger-ui-express');
+const cors = require('cors');
+const { Server } = require('socket.io');
+const http = require('http');
+
+/*routes*/
+const userRoutes = require('./routes/userRoutes');
+const articleRoutes = require('./routes/articleRoutes');
+const shelfRoutes = require('./routes/shelfRoutes');
+const closetRoutes = require('./routes/closetRoutes');
+const shoppingRoutes = require('./routes/buyArticle')
+
+
+
+try {
+    connectDB();
+  } catch (error) {
+    console.error('Failed to connect to database:', error);
+  }
+
+const jwt = require('jsonwebtoken');
+
+
+
+var app = express();
+
+app.use(cors());
+
+// view engine setup
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'hbs');
+
+app.use(logger('dev'));
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
+app.use('/users', userRoutes);
+app.use('/shelf', shelfRoutes);
+app.use('/shopping', shoppingRoutes);
+app.use('/closet', closetRoutes);
+app.use('/article', articleRoutes)
+
+
+
+// catch 404 and forward to error handler
+app.use(function(req, res, next) {
+  next(createError(404));
+});
+
+// error handler
+app.use(function(err, req, res, next) {
+  // set locals, only providing error in development
+  res.locals.message = err.message;
+  res.locals.error = req.app.get('env') === 'development' ? err : {};
+
+  // render the error page
+  res.status(err.status || 500);
+  res.render('error');
+});
+
+module.exports = app;
+
+
+const HOST = '0.0.0.0';
+const PORT = process.env.PORT || 3000; // DODANO: Definiramo PORT
+
+if (require.main === module && process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, HOST, () => {
+    console.log(`🚀 Server is running on http://${HOST}:${PORT}`);
+    console.log(`📑 Swagger UI available at http://${HOST}:${PORT}/api-docs`);
+  });
+}

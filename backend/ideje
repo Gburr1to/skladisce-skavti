@@ -1,0 +1,14 @@
+shoppinglist bo imel plaintext vsega, ne povezav do articlov niti ljudi. Article boš ustvaril potem, ko stvar kupiš.
+
+soppingList se preimenuje v buyArticle. Funkcija za izpis seznama ipd.
+Seznam bo imel gumb za dat na kupljeno (atribut), ali pa izbrisat nek artikel, ki je že kupljen.
+DONE
+
+Omara list vrne vse omare.
+Omara funkcija seznam polic vrne list polic, filtrira tiste s staršem omare ki je ta omara (id)
+
+Polica ima svojega starša (omaro)
+Polica seznam artiklov vrne list artiklov, filtrira tiste ki imajo starša to polico po id.
+
+Artikel ima povezavo do police, na kateri se nahaja.
+Search artiklov tako za vsak artikel lahko ugotovimo na kateri polici je.

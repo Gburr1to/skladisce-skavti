@@ -1,0 +1,20 @@
+NAREDI MVC yes
+
+naredi funkcije
+naredi swagger dokumentacijo funkcij
+
+popravi modele, da pravilno pobirajo linke do qr slik
+
+Funkcija za generiranje in dodajanje qr kod (nek sistem da se ne podvajajo (povezana številka?))
+
+Funkcija za seznam imetnikov ključa. Ampak samo imena, ne model. *tako kot vse ostale funkcije
+
+ne rabimo captcha, niti gumbov za dodajanje/spreminjanje userjev.
+(En account za vse)
+
+FRONTEND layout
+FRONTEND specifična okna
+povezava z backendom
+
+push to github (ker why not?) Ali gitlabs
+push na azure vm
