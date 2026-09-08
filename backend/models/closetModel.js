@@ -1,10 +1,21 @@
-var mongoose = require('mongoose');
-var Schema   = mongoose.Schema;
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
-var closetSchema = new Schema({
-	'name' : String,
-	'location' : String,
-	'picture' : String
+const closetSchema = new Schema({
+    name: { 
+        type: String, 
+        required: [true, 'Ime omare je obvezno'] 
+    },
+    location: { 
+        type: String, 
+        default: '' 
+    },
+    picture: { 
+        type: String, 
+        default: '' 
+    }
+}, { 
+    timestamps: true 
 });
 
 module.exports = mongoose.model('closet', closetSchema);

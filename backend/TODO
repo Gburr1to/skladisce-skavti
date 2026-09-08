@@ -3,9 +3,9 @@ NAREDI MVC yes
 naredi funkcije
 naredi swagger dokumentacijo funkcij
 
-popravi modele, da pravilno pobirajo linke do qr slik
+popravi modele, da pravilno pobirajo linke do qr slik -- črtaj, brez qr kod
 
-Funkcija za generiranje in dodajanje qr kod (nek sistem da se ne podvajajo (povezana številka?))
+Funkcija za generiranje in dodajanje qr kod (nek sistem da se ne podvajajo (povezana številka?)) -- črtaj, brez qr kod
 
 Funkcija za seznam imetnikov ključa. Ampak samo imena, ne model. *tako kot vse ostale funkcije
 

@@ -1,10 +1,21 @@
-var mongoose = require('mongoose');
-var Schema   = mongoose.Schema;
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
-var buyArticleSchema = new Schema({
-	'name' : String,
-	'person' : String,
-	'isPurchased' : Boolean
+const buyArticleSchema = new Schema({
+    name: { 
+        type: String, 
+        required: [true, 'Naziv artikla za nakup je obvezen'] 
+    },
+    person: { 
+        type: String, 
+        default: '' // Plaintext ime osebe, ki predlaga ali kupuje
+    },
+    isPurchased: { 
+        type: Boolean, 
+        default: false 
+    }
+}, { 
+    timestamps: true 
 });
 
 module.exports = mongoose.model('buyArticle', buyArticleSchema);

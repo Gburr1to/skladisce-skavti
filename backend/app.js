@@ -1,3 +1,4 @@
+require('dotenv').config();
 var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
@@ -6,8 +7,6 @@ const connectDB = require('./config/db');
 const swaggerDocs = require('./config/swagger');
 const swaggerUi = require('swagger-ui-express');
 const cors = require('cors');
-const { Server } = require('socket.io');
-const http = require('http');
 
 /*routes*/
 const userRoutes = require('./routes/userRoutes');
@@ -24,7 +23,7 @@ try {
     console.error('Failed to connect to database:', error);
   }
 
-const jwt = require('jsonwebtoken');
+
 
 
 

@@ -1,115 +1,200 @@
-var express = require('express');
-var router = express.Router();
-var userController = require('../controllers/userController.js');
-var { authenticateToken } = require('../middleware/authMiddleware');
+const express = require('express');
+const router = express.Router();
+const userController = require('../controllers/userController.js');
+const { authenticateToken } = require('../middleware/authMiddleware.js');
 
+/**
+ * @swagger
+ * tags:
+ *   name: Users
+ *   description: Uporabniki, prijava in imetniki ključa skladišča
+ */
 
-router.get('/', userController.list);
-//router.get('/register', userController.showRegister);
-//router.get('/login', userController.showLogin);
+/**
+ * @swagger
+ * /users/login:
+ *   post:
+ *     summary: Prijava v sistem (vrne JWT žeton)
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 example: "skavt"
+ *               password:
+ *                 type: string
+ *                 example: "skavt"
+ *     responses:
+ *       200:
+ *         description: Uspešna prijava, vrne JWT žeton
+ *       401:
+ *         description: Napačno uporabniško ime ali geslo
+ */
+router.post('/login', userController.login);
 
 /**
  * @swagger
  * /users/profile:
- *    get:
- *        summary: Retrieves the logged-in user's profile
- *        tags: [Users]
- *        description: Fetches profile data for the user identified by the JWT token.
- *        security:
- *            - bearerAuth: []
- *        responses:
- *            '200':
- *                description: User profile data.
- *            '401':
- *                description: Unauthorized.
+ *   get:
+ *     summary: Podatki o prijavljenem uporabniku (zahteva JWT)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Podatki o uporabniku
+ *       401:
+ *         description: Nimate veljavnega žetona
  */
 router.get('/profile', authenticateToken, userController.profile);
 
 /**
  * @swagger
  * /users/logout:
- *    get:
- *        summary: Logs out the user
- *        tags: [Users]
- *        description: Invalidate the session (client-side JWT removal is usually sufficient).
- *        responses:
- *            '200':
- *                description: Logout message.
+ *   get:
+ *     summary: Odjava uporabnika
+ *     tags: [Users]
+ *     responses:
+ *       200:
+ *         description: Odjava uspešna
  */
 router.get('/logout', userController.logout);
 
+/**
+ * @swagger
+ * /users/key-holders:
+ *   get:
+ *     summary: Vrne seznam imetnikov ključa (SAMO IMENA, brez objektov)
+ *     tags: [Users]
+ *     responses:
+ *       200:
+ *         description: Seznam imen imetnikov ključa
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: string
+ *               example: ["Janez Novak", "Micka Kovač", "Luka Skavt"]
+ */
+router.get('/key-holders', userController.listKeyHolders);
 
 /**
  * @swagger
- * /users/csrf-token:
- *    get:
- *        summary: Retrieves a CSRF token
- *        tags: [Users]
- *        description: Endpoint for CSRF protection (placeholder in this stateless app).
- *        responses:
- *            '200':
- *                description: CSRF token message.
+ * /users/key-holders:
+ *   post:
+ *     summary: Doda novo ime na seznam imetnikov ključa
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: "Tone Vodnik"
+ *     responses:
+ *       201:
+ *         description: Posodobljen seznam imen imetnikov ključa
  */
-router.get('/csrf-token', userController.getCsrfToken);
-
+router.post('/key-holders', userController.addKeyHolder);
 
 /**
  * @swagger
- * /users/register-dev:
- *    post:
- *        summary: Registers a new user (Dev only)
- *        tags: [Users]
- *        description: Creates a user account without CAPTCHA verification. For testing purposes only.
- *        requestBody:
- *            required: true
- *            content:
- *                application/json:
- *                    schema:
- *                        type: object
- *                        properties:
- *                            username:
- *                                type: string
- *                            password:
- *                                type: string
- *                            email:
- *                                type: string
- *        responses:
- *            '201':
- *                description: User created successfully.
- *            '500':
- *                description: Server error.
+ * /users/key-holders/{name}:
+ *   delete:
+ *     summary: Odstrani ime s seznama imetnikov ključa
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: name
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Ime osebe za odstranitev
+ *     responses:
+ *       200:
+ *         description: Posodobljen seznam imen imetnikov ključa
  */
-router.post('/register-dev', userController.registerDev);
-
+router.delete('/key-holders/:name', userController.removeKeyHolder);
 
 /**
  * @swagger
- * /users/login:
- *    post:
- *        summary: Authenticates a user
- *        tags: [Users]
- *        description: Validates credentials and returns a JWT token.
- *        requestBody:
- *            required: true
- *            content:
- *                application/json:
- *                    schema:
- *                        type: object
- *                        properties:
- *                            username:
- *                                type: string
- *                            password:
- *                                type: string
- *        responses:
- *            '200':
- *                description: Login successful. Returns a JWT.
- *            '401':
- *                description: Invalid credentials.
+ * /users:
+ *   get:
+ *     summary: Vrne seznam uporabnikov
+ *     tags: [Users]
+ *     responses:
+ *       200:
+ *         description: Seznam uporabnikov
  */
-router.post('/login', userController.login);
+router.get('/', userController.list);
 
-router.put('/', authenticateToken, userController.upload.single('image'), userController.update);
+/**
+ * @swagger
+ * /users:
+ *   post:
+ *     summary: Ustvari novega uporabnika (registracija)
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 example: "nov_skavt"
+ *               password:
+ *                 type: string
+ *                 example: "skavtisozakon123"
+ *               picture:
+ *                 type: string
+ *                 example: "https://example.com/slika.jpg"
+ *     responses:
+ *       201:
+ *         description: Uporabnik uspešno ustvarjen
+ *       400:
+ *         description: Manjkajoči podatki ali uporabnik že obstaja
+ */
+router.post('/', userController.create);
+router.post('/register', userController.create);
 
-router.delete('/:id', authenticateToken, userController.remove);
+/**
+ * @swagger
+ * /users/{id}:
+ *   delete:
+ *     summary: Izbriše uporabnika
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID uporabnika
+ *     responses:
+ *       200:
+ *         description: Uporabnik uspešno izbrisan
+ *       404:
+ *         description: Uporabnik ne obstaja
+ */
+router.delete('/:id', userController.remove);
 
 module.exports = router;

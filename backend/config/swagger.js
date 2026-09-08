@@ -1,5 +1,7 @@
 const swaggerJsDoc = require('swagger-jsdoc');
 
+const path = require('path');
+
 const swaggerOptions = {
   swaggerDefinition: {
     openapi: '3.0.0',
@@ -9,7 +11,7 @@ const swaggerOptions = {
       description: 'API za upravljanje skavtskega skladišča, inventarja in uporabnikov', // POPRAVLJENO
     },
     servers: [
-      { url: 'http://localhost:3000' }
+      { url: process.env.SERVER_URL || '/' }
     ],
     components: {
       securitySchemes: {
@@ -26,7 +28,7 @@ const swaggerOptions = {
       },
     ],
   },
-  apis: ['./routes/*.js'],
+  apis: [path.join(__dirname, '../routes/*.js')],
 };
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
