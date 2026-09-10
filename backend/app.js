@@ -1,6 +1,7 @@
 require('dotenv').config();
 var createError = require('http-errors');
 var express = require('express');
+var path = require('path');
 var logger = require('morgan');
 const connectDB = require('./config/db');
 const swaggerDocs = require('./config/swagger');
