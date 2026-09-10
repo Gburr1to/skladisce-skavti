@@ -12,9 +12,14 @@ Funkcija za seznam imetnikov ključa. Ampak samo imena, ne model. *tako kot vse 
 ne rabimo captcha, niti gumbov za dodajanje/spreminjanje userjev.
 (En account za vse)
 
-FRONTEND layout
-FRONTEND specifična okna
-povezava z backendom
+DONE
+--------
 
-push to github (ker why not?) Ali gitlabs
-push na azure vm
+Ob vsakem pushu na ghub se auto rebuildajo render in cloudflare strani.
+Ob uploadu na development se izvede test skripta (opcijsko)
+Funkcija za izvoz v excel (lahko tudi direktna povezava v naš google drive), za popis skladišča, imetnikov ključev 
+
+
+naj mi ai da običajne napotke za potek dela pri frontendu, roadmap.
+
+

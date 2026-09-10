@@ -1,3 +1,4 @@
+/*
 shoppinglist bo imel plaintext vsega, ne povezav do articlov niti ljudi. Article boš ustvaril potem, ko stvar kupiš.
 
 soppingList se preimenuje v buyArticle. Funkcija za izpis seznama ipd.
@@ -12,3 +13,8 @@ Polica seznam artiklov vrne list artiklov, filtrira tiste ki imajo starša to po
 
 Artikel ima povezavo do police, na kateri se nahaja.
 Search artiklov tako za vsak artikel lahko ugotovimo na kateri polici je.
+
+--------
+Skladišče lahko naknadno slikam za izboljšan UI ptičjo perspektivo skladišča.
+Naj naredim dejanski map in notri koordinate naših omar, geolokacija? Ali samo slika kjer lahko izbereš komponente?
+*/
