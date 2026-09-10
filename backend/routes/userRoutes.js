@@ -37,6 +37,8 @@ const { authenticateToken } = require('../middleware/authMiddleware.js');
  *         description: Uspešna prijava, vrne JWT žeton
  *       401:
  *         description: Napačno uporabniško ime ali geslo
+ *       500:
+ *         description: Napaka strežnika pri prijavi, na primer manjkajoča JWT skrivnost ali nedosegljiva baza
  */
 router.post('/login', userController.login);
 

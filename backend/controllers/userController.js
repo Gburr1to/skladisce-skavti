@@ -96,6 +96,7 @@ module.exports = {
                 }
             });
         } catch (err) {
+            console.error('Login error:', err.message);
             return res.status(500).json({
                 message: 'Napaka pri prijavi.',
                 error: err.message
