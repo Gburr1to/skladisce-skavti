@@ -1,8 +1,7 @@
 const UserModel = require('../models/userModel.js');
 const KeyHolderModel = require('../models/keyHolderModel.js');
 const jwt = require('jsonwebtoken');
-
-const JWT_SECRET = process.env.ACCESS_TOKEN_SECRET || process.env.ACCES_TOKEN_SECRET || 'skavti_skladisce_tajni_kljuc_2026';
+const { requireJwtSecret } = require('../config/auth.js');
 
 module.exports = {
     /**
@@ -82,7 +81,11 @@ module.exports = {
                 return res.status(401).json({ message: 'Napačno uporabniško ime ali geslo.' });
             }
 
-            const token = jwt.sign({ id: user._id, username: user.username }, JWT_SECRET, { expiresIn: '30m' });
+            const token = jwt.sign(
+                { id: user._id, username: user.username },
+                requireJwtSecret(),
+                { expiresIn: '30m' }
+            );
             return res.json({
                 message: 'Prijava uspešna.',
                 token,

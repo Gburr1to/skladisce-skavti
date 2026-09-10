@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { requireJwtSecret } = require('../config/auth.js');
 
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
@@ -8,9 +9,11 @@ function authenticateToken(req, res, next) {
         return res.status(401).json({ message: 'No token provided' });
     }
 
-    const secret = process.env.ACCESS_TOKEN_SECRET;
-    if (!secret) {
-        return res.status(500).json({ message: 'Strežniška napaka: ACCESS_TOKEN_SECRET ni nastavljen.' });
+    let secret;
+    try {
+        secret = requireJwtSecret();
+    } catch (error) {
+        return res.status(error.status || 500).json({ message: error.message });
     }
 
     jwt.verify(token, secret, (err, user) => {
