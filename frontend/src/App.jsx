@@ -10,6 +10,7 @@ import ClosetPage from './pages/ClosetPage';
 import ShelfPage from './pages/ShelfPage';
 import AllArticlesPage from './pages/AllArticlesPage';
 import BorrowingsPage from './pages/BorrowingsPage';
+import ShoppingPage from './pages/ShoppingPage';
 import KeyHoldersPage from './pages/KeyHoldersPage';
 
 export default function App() {

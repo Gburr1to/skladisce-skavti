@@ -88,9 +88,6 @@ export default function AllArticlesPage() {
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
             Vsi artikli
           </h1>
-          <p className="text-xs text-slate-500">
-            Skupaj {articles.length} artiklov v skladišču
-          </p>
         </div>
 
         <span className="text-xs font-bold px-2.5 py-1 bg-emerald-50 text-emerald-800 rounded-lg border border-emerald-100">

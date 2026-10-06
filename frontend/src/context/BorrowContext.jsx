@@ -1,17 +1,20 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../services/api';
 
 const BorrowContext = createContext(null);
 
+const normalizeBorrow = (b) => {
+  if (!b) return b;
+  return {
+    ...b,
+    id: b._id || b.id,
+    articleName: b.articleName || b.article?.name || 'Artikel'
+  };
+};
+
 export function BorrowProvider({ children }) {
-  const [borrows, setBorrows] = useState(() => {
-    try {
-      const saved = localStorage.getItem('skavt_borrows');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [borrows, setBorrows] = useState([]);
+  const [loadingBorrows, setLoadingBorrows] = useState(true);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedArticle, setSelectedArticle] = useState(null);
@@ -19,9 +22,26 @@ export function BorrowProvider({ children }) {
   const [lastUpdatedArticle, setLastUpdatedArticle] = useState(null);
   const callbackRef = useRef(null);
 
+  // Naložimo izposoje neposredno iz baze (MongoDB), brez localStorage
+  const loadBorrows = useCallback(async () => {
+    try {
+      setLoadingBorrows(true);
+      const data = await api.getBorrows();
+      if (Array.isArray(data)) {
+        setBorrows(data.map(normalizeBorrow));
+      } else {
+        setBorrows([]);
+      }
+    } catch (err) {
+      console.error('Napaka pri nalaganju izposoj iz baze:', err);
+    } finally {
+      setLoadingBorrows(false);
+    }
+  }, []);
+
   useEffect(() => {
-    localStorage.setItem('skavt_borrows', JSON.stringify(borrows));
-  }, [borrows]);
+    loadBorrows();
+  }, [loadBorrows]);
 
   const showToast = (message, type = 'success') => {
     setToastMessage({ message, type });
@@ -45,38 +65,27 @@ export function BorrowProvider({ children }) {
   const borrowArticle = async ({ article, quantity, person, purpose, returnDate }) => {
     const qtyToBorrow = Number(quantity) || 1;
     if (qtyToBorrow <= 0) throw new Error('Količina mora biti večja od 0.');
-    if (qtyToBorrow > article.quantity) throw new Error(`Na voljo je le ${article.quantity} kosov.`);
+    if (qtyToBorrow > (article.quantity || 0)) {
+      throw new Error(`Na voljo je le ${article.quantity} kosov.`);
+    }
 
-    const newStock = article.quantity - qtyToBorrow;
-
-    // Posodobimo zalogo v bazi
-    const updated = await api.updateArticle(article._id, {
-      name: article.name,
-      description: article.description,
-      shelf: article.shelf?._id || article.shelf,
-      quantity: newStock
-    });
-
-    const finalArticle = {
-      ...article,
-      ...updated,
-      quantity: newStock
-    };
-
-    // Zabeležimo izposojo
-    const newBorrowRecord = {
-      id: 'BORROW-' + Date.now(),
+    // Ustvarimo izposojo v bazi preko API (ta avtomatsko posodobi tudi zalogo na artiklu)
+    const res = await api.createBorrow({
       articleId: article._id,
-      articleName: article.name,
       quantity: qtyToBorrow,
       person: person || 'Neznano',
       purpose: purpose || 'Tabor / akcija',
-      borrowDate: new Date().toISOString(),
-      returnDate: returnDate || '',
-      status: 'active'
+      returnDate: returnDate || null
+    });
+
+    const normalizedBorrow = normalizeBorrow(res);
+    setBorrows(prev => [normalizedBorrow, ...prev]);
+
+    const finalArticle = res.updatedArticle || {
+      ...article,
+      quantity: (article.quantity || 0) - qtyToBorrow
     };
 
-    setBorrows(prev => [newBorrowRecord, ...prev]);
     setLastUpdatedArticle(finalArticle);
 
     // Kličemo callback, če obstaja
@@ -84,7 +93,7 @@ export function BorrowProvider({ children }) {
       callbackRef.current(finalArticle);
     }
 
-    // Sprožimo še globalni dogodek, da se posodobijo vsi seznami v aplikaciji
+    // Sprožimo globalni dogodek, da se posodobijo vsi seznami v aplikaciji
     window.dispatchEvent(new CustomEvent('skavt:article-updated', { detail: finalArticle }));
 
     showToast(`Izposojeno: ${qtyToBorrow}x ${article.name} (${person || 'skavti'}).`);
@@ -93,36 +102,33 @@ export function BorrowProvider({ children }) {
   };
 
   const returnBorrow = async (borrowId) => {
-    const record = borrows.find(b => b.id === borrowId);
-    if (!record) return;
-
     try {
-      try {
-        const art = await api.getArticle(record.articleId);
-        if (art) {
-          const newQty = (art.quantity || 0) + record.quantity;
-          await api.updateArticle(art._id, {
-            name: art.name,
-            description: art.description,
-            shelf: art.shelf?._id || art.shelf,
-            quantity: newQty
-          });
-          setLastUpdatedArticle({ ...art, quantity: newQty });
-          window.dispatchEvent(new CustomEvent('skavt:article-updated', { detail: { ...art, quantity: newQty } }));
-        }
-      } catch (fetchErr) {
-        console.warn('Artikel morda ne obstaja več:', fetchErr.message);
+      const res = await api.returnBorrow(borrowId);
+      const normalizedUpdated = normalizeBorrow(res);
+
+      setBorrows(prev => prev.map(b => (b._id === borrowId || b.id === borrowId) ? normalizedUpdated : b));
+
+      if (res.updatedArticle) {
+        setLastUpdatedArticle(res.updatedArticle);
+        window.dispatchEvent(new CustomEvent('skavt:article-updated', { detail: res.updatedArticle }));
       }
 
-      setBorrows(prev => prev.map(b => b.id === borrowId ? { ...b, status: 'returned', returnedAt: new Date().toISOString() } : b));
-      showToast(`Artikel "${record.articleName}" vrnjen v skladišče.`);
+      showToast(`Artikel "${normalizedUpdated.articleName}" vrnjen v skladišče.`);
+      return normalizedUpdated;
     } catch (err) {
       showToast('Napaka pri vračilu: ' + err.message, 'error');
+      throw err;
     }
   };
 
-  const deleteBorrowRecord = (borrowId) => {
-    setBorrows(prev => prev.filter(b => b.id !== borrowId));
+  const deleteBorrowRecord = async (borrowId) => {
+    try {
+      await api.deleteBorrow(borrowId);
+      setBorrows(prev => prev.filter(b => b._id !== borrowId && b.id !== borrowId));
+    } catch (err) {
+      console.error('Napaka pri brisanju izposoje:', err);
+      showToast('Napaka pri brisanju izposoje: ' + err.message, 'error');
+    }
   };
 
   return (
@@ -130,6 +136,8 @@ export function BorrowProvider({ children }) {
       value={{
         borrows,
         activeBorrows: borrows.filter(b => b.status === 'active'),
+        loadingBorrows,
+        loadBorrows,
         openBorrowModal,
         closeBorrowModal,
         borrowArticle,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useBorrow } from '../context/BorrowContext';
 import { api } from '../services/api';
 import { 
@@ -11,39 +11,28 @@ import {
   AlertTriangle,
   ShoppingCart,
   X,
-  Plus
+  Loader2
 } from 'lucide-react';
 
 export default function BorrowingsPage() {
-  const { borrows, activeBorrows, returnBorrow, deleteBorrowRecord, showToast } = useBorrow();
-  const [filterTab, setFilterTab] = useState('active'); // 'active', 'all', 'shopping'
+  const { 
+    activeBorrows, 
+    returnBorrow, 
+    deleteBorrowRecord, 
+    showToast,
+    loadingBorrows,
+    loadBorrows
+  } = useBorrow();
 
   // Modal za "Odrabljeno / uničeno"
   const [damagedModalRecord, setDamagedModalRecord] = useState(null);
   const [processingDamaged, setProcessingDamaged] = useState(false);
 
-  // Nakupovalni seznam
-  const [shoppingItems, setShoppingItems] = useState([]);
-  const [loadingShopping, setLoadingShopping] = useState(false);
-  const [newShoppingName, setNewShoppingName] = useState('');
-
-  const loadShopping = useCallback(async () => {
-    try {
-      setLoadingShopping(true);
-      const data = await api.getShoppingList();
-      setShoppingItems(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error('Napaka pri nalaganju nakupovalnega seznama:', err);
-    } finally {
-      setLoadingShopping(false);
-    }
-  }, []);
-
   useEffect(() => {
-    if (filterTab === 'shopping') {
-      loadShopping();
+    if (loadBorrows) {
+      loadBorrows();
     }
-  }, [filterTab, loadShopping]);
+  }, [loadBorrows]);
 
   const formatDate = (isoStr) => {
     if (!isoStr) return '-';
@@ -71,13 +60,10 @@ export default function BorrowingsPage() {
         showToast(`Izposoja za "${damagedModalRecord.articleName}" odstranjena.`);
       }
 
-      // Odstranimo izposojo, saj je artikel uničen/odrabljen in ga ni več
-      deleteBorrowRecord(damagedModalRecord.id);
+      // Odstranimo izposojo, saj je artikel uničen/odrabljen in ga ni več v skladišču
+      const recId = damagedModalRecord._id || damagedModalRecord.id;
+      await deleteBorrowRecord(recId);
       setDamagedModalRecord(null);
-
-      if (filterTab === 'shopping') {
-        await loadShopping();
-      }
     } catch (err) {
       showToast('Napaka: ' + err.message, 'error');
     } finally {
@@ -85,239 +71,114 @@ export default function BorrowingsPage() {
     }
   };
 
-  const handleAddDirectShopping = async (e) => {
-    e.preventDefault();
-    if (!newShoppingName.trim()) return;
-
-    try {
-      await api.createShoppingItem({
-        name: newShoppingName.trim(),
-        person: 'Skladišče'
-      });
-      setNewShoppingName('');
-      await loadShopping();
-      showToast('Dodano na nakupovalni seznam.');
-    } catch (err) {
-      showToast('Napaka pri dodajanju: ' + err.message, 'error');
-    }
-  };
-
-  const displayedBorrows = filterTab === 'active' 
-    ? activeBorrows 
-    : borrows;
-
   return (
     <div className="space-y-4 max-w-2xl mx-auto">
       
       {/* Glava */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+      <div className="flex items-center justify-between gap-3 pt-1">
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-            Izposoje & Nakupi
+            Trenutne izposoje
           </h1>
           <p className="text-xs text-slate-500">
-            Pregled izposojene opreme in seznam za nakup novih artiklov
+            Pregled trenutno aktivne izposojene opreme
           </p>
         </div>
 
-        {/* Zavihki */}
-        <div className="flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl text-xs self-start sm:self-auto">
-          <button
-            onClick={() => setFilterTab('active')}
-            className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
-              filterTab === 'active'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Aktivne ({activeBorrows.length})
-          </button>
-          <button
-            onClick={() => setFilterTab('all')}
-            className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
-              filterTab === 'all'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Vse ({borrows.length})
-          </button>
-          <button
-            onClick={() => setFilterTab('shopping')}
-            className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1 ${
-              filterTab === 'shopping'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <ShoppingCart className="w-3.5 h-3.5" />
-            <span>Za nakup</span>
-          </button>
-        </div>
+        <span className="text-xs font-bold px-2.5 py-1 bg-amber-50 text-amber-900 rounded-lg border border-amber-200">
+          Aktivne: {activeBorrows.length}
+        </span>
       </div>
 
-      {/* Nakupovalni seznam zavihek */}
-      {filterTab === 'shopping' ? (
-        <div className="space-y-3">
-          {/* Obrazec za hiter vnos artikla za nakup */}
-          <form onSubmit={handleAddDirectShopping} className="flex gap-2 bg-white p-2.5 rounded-2xl border border-slate-200 shadow-2xs">
-            <input
-              type="text"
-              required
-              placeholder="Nov artikel za nakup (npr. 5x vrv 10m)..."
-              value={newShoppingName}
-              onChange={(e) => setNewShoppingName(e.target.value)}
-              className="flex-1 px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
-            />
-            <button
-              type="submit"
-              className="px-3.5 py-2 bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center gap-1 shrink-0"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Dodaj</span>
-            </button>
-          </form>
-
-          {loadingShopping ? (
-            <div className="p-8 text-center text-slate-400 text-xs">
-              Nalagam nakupovalni seznam...
-            </div>
-          ) : shoppingItems.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-8 text-center">
-              <ShoppingCart className="w-8 h-8 mx-auto text-slate-300 mb-2" />
-              <p className="text-xs text-slate-500">Nakupovalni seznam je prazen.</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {shoppingItems.map(item => (
-                <div
-                  key={item._id}
-                  className="bg-white rounded-2xl border border-slate-200/90 p-3.5 shadow-2xs flex items-center justify-between gap-3"
-                >
-                  <div>
-                    <span className="text-sm font-bold text-slate-900 block leading-tight">
-                      {item.name}
-                    </span>
-                    {item.person && (
-                      <span className="text-[11px] text-slate-400 mt-0.5 block">
-                        Predlagal: {item.person}
-                      </span>
-                    )}
-                  </div>
-
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    item.isPurchased ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'
-                  }`}>
-                    {item.isPurchased ? 'Kupljeno' : 'Potrebno kupiti'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+      {/* Seznam trenutnih izposoj */}
+      {loadingBorrows ? (
+        <div className="py-16 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-2">
+          <Loader2 className="w-7 h-7 animate-spin text-emerald-600" />
+          <span>Nalagam izposoje...</span>
+        </div>
+      ) : activeBorrows.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-10 text-center">
+          <CheckCircle2 className="w-10 h-10 mx-auto text-emerald-500 mb-2" />
+          <h3 className="text-sm font-bold text-slate-800">
+            Trenutno ni aktivnih izposoj
+          </h3>
+          <p className="text-xs text-slate-500 mt-1">
+            Vsa oprema je pospravljena v skladišču.
+          </p>
         </div>
       ) : (
-        /* Seznam izposoj */
-        displayedBorrows.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-8 text-center">
-            <CheckCircle2 className="w-8 h-8 mx-auto text-emerald-500 mb-2" />
-            <h3 className="text-sm font-bold text-slate-800">
-              {filterTab === 'active' ? 'Trenutno ni aktivnih izposoj' : 'Zgodovina je prazna'}
-            </h3>
-            <p className="text-xs text-slate-500 mt-1">
-              Vsa oprema je pospravljena v skladišču.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-2.5">
-            {displayedBorrows.map(record => {
-              const isActive = record.status === 'active';
+        <div className="space-y-2.5">
+          {activeBorrows.map(record => {
+            const recordId = record._id || record.id;
+            const articleTitle = record.articleName || record.article?.name || 'Artikel';
 
-              return (
-                <div
-                  key={record.id}
-                  className={`bg-white rounded-2xl border p-4 shadow-2xs flex flex-col justify-between transition-all ${
-                    isActive 
-                      ? 'border-slate-200/90' 
-                      : 'border-slate-200 opacity-70 bg-slate-50/50'
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <span
-                        className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                          isActive
-                            ? 'bg-amber-100 text-amber-900'
-                            : 'bg-emerald-100 text-emerald-800'
-                        }`}
-                      >
-                        {isActive ? 'Izposojeno' : 'Vrnjeno'}
-                      </span>
+            return (
+              <div
+                key={recordId}
+                className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-2xs flex flex-col justify-between transition-all"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-900">
+                      Izposojeno
+                    </span>
 
-                      <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {formatDate(record.borrowDate)}
-                      </span>
-                    </div>
-
-                    <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                      <Package className="w-4 h-4 text-emerald-700 shrink-0" />
-                      <span>{record.quantity}x {record.articleName}</span>
-                    </h3>
-
-                    <div className="mt-2.5 space-y-1 text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl">
-                      <div className="flex items-center gap-1.5">
-                        <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span>Prevzel: <strong className="text-slate-800">{record.person}</strong></span>
-                      </div>
-
-                      {record.purpose && (
-                        <div className="text-[11px] text-slate-500 pl-5">
-                          Namen: {record.purpose}
-                        </div>
-                      )}
-
-                      {record.returnDate && (
-                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-                          <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span>Vračilo: <span className="font-semibold text-slate-700">{formatDate(record.returnDate)}</span></span>
-                        </div>
-                      )}
-                    </div>
+                    <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {formatDate(record.borrowDate)}
+                    </span>
                   </div>
 
-                  {/* Spodnji gumbi za akcijo */}
-                  <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2">
-                    {/* Gumb za odrabljeno/uničeno */}
-                    <button
-                      onClick={() => setDamagedModalRecord(record)}
-                      className="px-2.5 py-1.5 text-[11px] font-semibold text-rose-700 hover:text-rose-900 hover:bg-rose-50 rounded-xl transition-colors flex items-center gap-1"
-                      title="Označi artikel kot odrabljen ali uničen"
-                    >
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                      <span>Odrabljeno / uničeno</span>
-                    </button>
+                  <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <Package className="w-4 h-4 text-emerald-700 shrink-0" />
+                    <span>{record.quantity}x {articleTitle}</span>
+                  </h3>
 
-                    {isActive ? (
-                      <button
-                        onClick={() => returnBorrow(record.id)}
-                        className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 active:scale-95 transition-all"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                        <span>Vrni v skladišče</span>
-                      </button>
-                    ) : (
-                      <span className="text-xs text-emerald-700 font-semibold flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Vrnjeno</span>
-                      </span>
+                  <div className="mt-2.5 space-y-1 text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl">
+                    <div className="flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span>Prevzel: <strong className="text-slate-800">{record.person}</strong></span>
+                    </div>
+
+                    {record.purpose && (
+                      <div className="text-[11px] text-slate-500 pl-5">
+                        Namen: {record.purpose}
+                      </div>
+                    )}
+
+                    {record.returnDate && (
+                      <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                        <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span>Vračilo: <span className="font-semibold text-slate-700">{formatDate(record.returnDate)}</span></span>
+                      </div>
                     )}
                   </div>
-
                 </div>
-              );
-            })}
-          </div>
-        )
+
+                {/* Spodnji gumbi za akcijo */}
+                <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2">
+                  <button
+                    onClick={() => setDamagedModalRecord(record)}
+                    className="px-2.5 py-1.5 text-[11px] font-semibold text-rose-700 hover:text-rose-900 hover:bg-rose-50 rounded-xl transition-colors flex items-center gap-1"
+                    title="Označi artikel kot odrabljen ali uničen"
+                  >
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <span>Odrabljeno / uničeno</span>
+                  </button>
+
+                  <button
+                    onClick={() => returnBorrow(recordId)}
+                    className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 active:scale-95 transition-all"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Vrni v skladišče</span>
+                  </button>
+                </div>
+
+              </div>
+            );
+          })}
+        </div>
       )}
 
       {/* Modal za vprašanje ob odrabljenem/uničenem artiklu */}
@@ -341,7 +202,7 @@ export default function BorrowingsPage() {
             </div>
 
             <p className="text-xs text-slate-600 leading-relaxed">
-              Artikel <strong>{damagedModalRecord.quantity}x {damagedModalRecord.articleName}</strong> (prevzel: {damagedModalRecord.person}) bo označen kot odrabljen ali uničen in odstranjen iz evidence.
+              Artikel <strong>{damagedModalRecord.quantity}x {damagedModalRecord.articleName}</strong> (prevzel: {damagedModalRecord.person}) bo označen kot odrabljen ali uničen in odstranjen iz evidence izposoj.
             </p>
 
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900">

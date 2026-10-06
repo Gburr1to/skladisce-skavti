@@ -13,7 +13,9 @@ const userRoutes = require('./routes/userRoutes');
 const articleRoutes = require('./routes/articleRoutes');
 const shelfRoutes = require('./routes/shelfRoutes');
 const closetRoutes = require('./routes/closetRoutes');
-const shoppingRoutes = require('./routes/buyArticle')
+const shoppingRoutes = require('./routes/buyArticle');
+const borrowRoutes = require('./routes/borrowRoutes');
+const warehouseRoutes = require('./routes/warehouseRoutes');
 
 
 
@@ -42,7 +44,9 @@ app.use('/users', userRoutes);
 app.use('/shelf', shelfRoutes);
 app.use('/shopping', shoppingRoutes);
 app.use('/closet', closetRoutes);
-app.use('/article', articleRoutes)
+app.use('/article', articleRoutes);
+app.use('/borrow', borrowRoutes);
+app.use('/warehouse', warehouseRoutes);
 
 
 

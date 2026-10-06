@@ -7,7 +7,11 @@ module.exports = {
      */
     list: async function (req, res) {
         try {
-            const closets = await ClosetModel.find().sort({ name: 1 });
+            const filter = {};
+            if (req.query.warehouse) {
+                filter.warehouse = req.query.warehouse;
+            }
+            const closets = await ClosetModel.find(filter).populate('warehouse').sort({ name: 1 });
             return res.json(closets);
         } catch (err) {
             return res.status(500).json({
@@ -22,7 +26,7 @@ module.exports = {
      */
     show: async function (req, res) {
         try {
-            const closet = await ClosetModel.findById(req.params.id);
+            const closet = await ClosetModel.findById(req.params.id).populate('warehouse');
             if (!closet) {
                 return res.status(404).json({ message: 'Omara ne obstaja.' });
             }
@@ -58,7 +62,8 @@ module.exports = {
             const closet = new ClosetModel({
                 name: req.body.name,
                 location: req.body.location || '',
-                picture: req.body.picture || ''
+                picture: req.body.picture || '',
+                warehouse: req.body.warehouse || null
             });
             const savedCloset = await closet.save();
             return res.status(201).json(savedCloset);
@@ -75,13 +80,18 @@ module.exports = {
      */
     update: async function (req, res) {
         try {
+            const updateData = {
+                name: req.body.name,
+                location: req.body.location,
+                picture: req.body.picture
+            };
+            if (req.body.warehouse !== undefined) {
+                updateData.warehouse = req.body.warehouse;
+            }
+
             const updatedCloset = await ClosetModel.findByIdAndUpdate(
                 req.params.id,
-                {
-                    name: req.body.name,
-                    location: req.body.location,
-                    picture: req.body.picture
-                },
+                updateData,
                 { new: true, runValidators: true }
             );
             if (!updatedCloset) {

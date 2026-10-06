@@ -8,6 +8,7 @@ import {
   Archive, 
   Package, 
   HandHelping, 
+  ShoppingCart,
   LogOut, 
   CheckCircle2, 
   AlertCircle
@@ -25,14 +26,15 @@ export default function Layout({ children }) {
   };
 
   const navLinks = [
-    { name: 'Omare', path: '/', icon: Archive },
+    { name: 'Skladišča', path: '/', icon: Archive },
     { name: 'Artikli', path: '/artikli', icon: Package },
     { 
       name: 'Izposoje', 
       path: '/izposoje', 
       icon: HandHelping, 
       badge: activeBorrows.length > 0 ? activeBorrows.length : null 
-    }
+    },
+    { name: 'Nakupi', path: '/nakupi', icon: ShoppingCart }
   ];
 
   return (
@@ -41,23 +43,10 @@ export default function Layout({ children }) {
       {/* Glavni Header */}
       <header className="sticky top-0 z-40 bg-emerald-900 text-white shadow-xs">
         <div className="max-w-4xl mx-auto px-3 sm:px-6">
-          <div className="flex items-center justify-between h-14 gap-2.5">
+          <div className="flex items-center justify-between h-14 gap-3">
             
-            {/* Logo */}
-            <Link 
-              to="/" 
-              className="flex items-center gap-2 shrink-0 group hover:opacity-95 transition-opacity"
-            >
-              <div className="w-8 h-8 rounded-lg bg-emerald-700 flex items-center justify-center font-black text-emerald-200 text-xs shadow-xs">
-                SS
-              </div>
-              <span className="font-bold tracking-tight text-sm hidden sm:inline-block text-white">
-                Skladišče
-              </span>
-            </Link>
-
-            {/* Iskalnik */}
-            <div className="flex-1 max-w-md mx-1">
+            {/* Iskalnik - minimalističen izgled brez logotipa na levi */}
+            <div className="flex-1 max-w-md">
               <SearchBar />
             </div>
 

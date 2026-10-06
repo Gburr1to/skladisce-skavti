@@ -41,9 +41,23 @@ export const api = {
   logout: () => 
     request('/users/logout'),
 
+  // Warehouses (Skladišča)
+  getWarehouses: () => 
+    request('/warehouse'),
+  getWarehouse: (id) => 
+    request(`/warehouse/${id}`),
+  getWarehouseClosets: (id) => 
+    request(`/warehouse/${id}/closets`),
+  createWarehouse: (data) => 
+    request('/warehouse', { method: 'POST', body: JSON.stringify(data) }),
+  updateWarehouse: (id, data) => 
+    request(`/warehouse/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteWarehouse: (id) => 
+    request(`/warehouse/${id}`, { method: 'DELETE' }),
+
   // Closets (Omare)
-  getClosets: () => 
-    request('/closet'),
+  getClosets: (warehouseId) => 
+    request(warehouseId ? `/closet?warehouse=${encodeURIComponent(warehouseId)}` : '/closet'),
   getCloset: (id) => 
     request(`/closet/${id}`),
   getClosetShelves: (id) => 
@@ -86,6 +100,18 @@ export const api = {
     request(`/article/${id}/generate-qr`, { method: 'POST' }),
   getByQR: (code) => 
     request(`/article/qr/${encodeURIComponent(code)}`),
+
+  // Borrows (Izposoje)
+  getBorrows: (status) => 
+    request(status ? `/borrow?status=${encodeURIComponent(status)}` : '/borrow'),
+  getBorrow: (id) => 
+    request(`/borrow/${id}`),
+  createBorrow: (data) => 
+    request('/borrow', { method: 'POST', body: JSON.stringify(data) }),
+  returnBorrow: (id) => 
+    request(`/borrow/${id}/return`, { method: 'PATCH' }),
+  deleteBorrow: (id) => 
+    request(`/borrow/${id}`, { method: 'DELETE' }),
 
   // Key Holders (Imetniki ključa)
   getKeyHolders: () => 

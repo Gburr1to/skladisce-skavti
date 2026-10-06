@@ -13,6 +13,11 @@ const closetSchema = new Schema({
     picture: { 
         type: String, 
         default: '' 
+    },
+    warehouse: {
+        type: Schema.Types.ObjectId,
+        ref: 'warehouse',
+        default: null
     }
 }, { 
     timestamps: true 

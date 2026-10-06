@@ -71,6 +71,7 @@ async function runTests() {
 
     let authToken = null;
     let createdUserId = null;
+    let createdWarehouseId = null;
     let createdClosetId = null;
     let createdShelfId = null;
     let createdArticleId = null;
@@ -148,17 +149,43 @@ async function runTests() {
         assert(delKeyRes.status === 200 && !delKeyRes.data.includes(testKeyHolderName), 'DELETE /users/key-holders/:name odstrani imetnika');
 
         // -------------------------------------------------------------
-        // 4. OMARE (Closets)
+        // 4. SKLADIŠČA (Warehouses)
         // -------------------------------------------------------------
-        console.log(`\n${BOLD}[4. Omare (Closets)]${RESET}`);
-        // Ustvari omaro
+        console.log(`\n${BOLD}[4. Skladišča (Warehouses)]${RESET}`);
+        // Pridobi skladišča (avtomatsko ustvari privzeto skladišče, če ga še ni)
+        const initWhRes = await request(baseUrl, 'GET', '/warehouse');
+        assert(initWhRes.status === 200 && Array.isArray(initWhRes.data) && initWhRes.data.length >= 1, 'GET /warehouse vrne vsaj privzeto skladišče');
+
+        // Ustvari novo skladišče
+        const whRes = await request(baseUrl, 'POST', '/warehouse', {
+            name: `Drugo Skladišče ${TEST_PREFIX}`,
+            location: 'Prebold, Garaža',
+            description: 'Dodatno skladišče za taborno opremo'
+        });
+        assert(whRes.status === 201 && whRes.data._id, 'POST /warehouse ustvari novo skladišče');
+        createdWarehouseId = whRes.data._id;
+
+        // Seznam z novim skladiščem
+        const whListRes = await request(baseUrl, 'GET', '/warehouse');
+        assert(whListRes.status === 200 && whListRes.data.some(w => w._id === createdWarehouseId), 'GET /warehouse vsebuje novoustvarjeno skladišče');
+
+        // -------------------------------------------------------------
+        // 5. OMARE (Closets)
+        // -------------------------------------------------------------
+        console.log(`\n${BOLD}[5. Omare (Closets)]${RESET}`);
+        // Ustvari omaro v novem skladišču
         const closetRes = await request(baseUrl, 'POST', '/closet', {
             name: `Glavna Omara ${TEST_PREFIX}`,
             location: 'Klet skavtske sobe',
-            picture: 'https://example.com/omara.jpg'
+            picture: 'https://example.com/omara.jpg',
+            warehouse: createdWarehouseId
         });
-        assert(closetRes.status === 201 && closetRes.data._id, 'POST /closet ustvari novo omaro');
+        assert(closetRes.status === 201 && closetRes.data._id, 'POST /closet ustvari novo omaro s povezavo na skladišče');
         createdClosetId = closetRes.data._id;
+
+        // Omare v določenem skladišču
+        const whClosetsRes = await request(baseUrl, 'GET', `/warehouse/${createdWarehouseId}/closets`);
+        assert(whClosetsRes.status === 200 && whClosetsRes.data.some(c => c._id === createdClosetId), 'GET /warehouse/:id/closets vrne omare določenega skladišča');
 
         // Seznam omar
         const closetListRes = await request(baseUrl, 'GET', '/closet');
@@ -258,9 +285,57 @@ async function runTests() {
         assert(toggleRes.status === 200 && toggleRes.data.isPurchased === true, 'PATCH /shopping/:id/toggle-purchased označi artikel kot kupljen');
 
         // -------------------------------------------------------------
-        // 8. BRISANJE & ČIŠČENJE TESTNIH PODATKOV
+        // 8. IZPOSOJE (Borrow Model & API)
         // -------------------------------------------------------------
-        console.log(`\n${BOLD}[8. Čiščenje testnih podatkov]${RESET}`);
+        console.log(`\n${BOLD}[8. Izposoje (Borrow Model & API)]${RESET}`);
+        let createdBorrowId = null;
+
+        // Izposodi 2 kosa artikla (zaloga je bila 3)
+        const borrowRes = await request(baseUrl, 'POST', '/borrow', {
+            articleId: createdArticleId,
+            quantity: 2,
+            person: 'Luka Novak',
+            purpose: 'Zimovanje Pohorje',
+            returnDate: '2026-10-15'
+        });
+        assert(borrowRes.status === 201 && borrowRes.data._id, 'POST /borrow uspešno ustvari izposojo z referenco na artikel');
+        assert(borrowRes.data.quantity === 2, 'Količina izposoje je pravilno shranjena');
+        assert(borrowRes.data.status === 'active', 'Začetni status izposoje je active');
+        assert(borrowRes.data.article && borrowRes.data.article._id === createdArticleId, 'Izposoja ima populiran artikel');
+        createdBorrowId = borrowRes.data._id;
+
+        // Preveri, da se je zaloga artikla v skladišču avtomatsko zmanjšala (3 - 2 = 1)
+        const artAfterBorrow = await request(baseUrl, 'GET', `/article/${createdArticleId}`);
+        assert(artAfterBorrow.status === 200 && artAfterBorrow.data.quantity === 1, 'Zaloga artikla se je samodejno zmanjšala na 1');
+
+        // Poskusi izposoditi več kot je na zalogi (zaloga je 1, poskusimo 5)
+        const failBorrowRes = await request(baseUrl, 'POST', '/borrow', {
+            articleId: createdArticleId,
+            quantity: 5,
+            person: 'Maja'
+        });
+        assert(failBorrowRes.status === 400, 'POST /borrow zavrne izposojo, če ni dovolj kosov na zalogi (400)');
+
+        // Seznam izposoj
+        const borrowListRes = await request(baseUrl, 'GET', '/borrow?status=active');
+        assert(borrowListRes.status === 200 && borrowListRes.data.some(b => b._id === createdBorrowId), 'GET /borrow vrne aktivne izposoje');
+
+        // Vračilo artikla
+        const returnRes = await request(baseUrl, 'PATCH', `/borrow/${createdBorrowId}/return`);
+        assert(returnRes.status === 200 && returnRes.data.status === 'returned', 'PATCH /borrow/:id/return uspešno zaključi izposojo');
+
+        // Preveri, da se je zaloga artikla vrnila nazaj (1 + 2 = 3)
+        const artAfterReturn = await request(baseUrl, 'GET', `/article/${createdArticleId}`);
+        assert(artAfterReturn.status === 200 && artAfterReturn.data.quantity === 3, 'Zaloga artikla se je ob vračilu samodejno povečala nazaj na 3');
+
+        // Izbriši izposojo
+        const delBorrowRes = await request(baseUrl, 'DELETE', `/borrow/${createdBorrowId}`);
+        assert(delBorrowRes.status === 200, 'DELETE /borrow/:id uspešno izbrisan');
+
+        // -------------------------------------------------------------
+        // 9. BRISANJE & ČIŠČENJE TESTNIH PODATKOV
+        // -------------------------------------------------------------
+        console.log(`\n${BOLD}[9. Čiščenje testnih podatkov]${RESET}`);
         if (createdArticleId) {
             const delArt = await request(baseUrl, 'DELETE', `/article/${createdArticleId}`);
             assert(delArt.status === 200, 'DELETE /article/:id uspešno izbrisan');
@@ -272,6 +347,10 @@ async function runTests() {
         if (createdClosetId) {
             const delCloset = await request(baseUrl, 'DELETE', `/closet/${createdClosetId}`);
             assert(delCloset.status === 200, 'DELETE /closet/:id uspešno izbrisana');
+        }
+        if (createdWarehouseId) {
+            const delWh = await request(baseUrl, 'DELETE', `/warehouse/${createdWarehouseId}`);
+            assert(delWh.status === 200, 'DELETE /warehouse/:id uspešno izbrisano');
         }
         if (createdShoppingId) {
             const delShop = await request(baseUrl, 'DELETE', `/shopping/${createdShoppingId}`);
