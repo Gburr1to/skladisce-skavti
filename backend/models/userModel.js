@@ -10,10 +10,6 @@ const userSchema = new Schema({
     password: { 
         type: String, 
         required: [true, 'Geslo je obvezno'] 
-    },
-    picture: { 
-        type: String, 
-        default: '' 
     }
 }, { 
     timestamps: true 

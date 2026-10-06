@@ -22,9 +22,25 @@ export default function App() {
             {/* Prijava (javna pot) */}
             <Route path="/login" element={<LoginPage />} />
 
-            {/* Zaščitene poti skladišča znotraj enotnega Layouta */}
+            {/* Zaščitene poti skladišča znotraj enotnega Layouta - primarni pogled so artikli */}
             <Route
               path="/"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <AllArticlesPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/artikli"
+              element={<Navigate to="/" replace />}
+            />
+
+            <Route
+              path="/skladisca"
               element={
                 <ProtectedRoute>
                   <Layout>
@@ -57,22 +73,22 @@ export default function App() {
             />
 
             <Route
-              path="/artikli"
+              path="/izposoje"
               element={
                 <ProtectedRoute>
                   <Layout>
-                    <AllArticlesPage />
+                    <BorrowingsPage />
                   </Layout>
                 </ProtectedRoute>
               }
             />
 
             <Route
-              path="/izposoje"
+              path="/nakupi"
               element={
                 <ProtectedRoute>
                   <Layout>
-                    <BorrowingsPage />
+                    <ShoppingPage />
                   </Layout>
                 </ProtectedRoute>
               }

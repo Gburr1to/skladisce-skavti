@@ -10,6 +10,16 @@ const articleSchema = new Schema({
         type: String, 
         default: '' 
     },
+    category: {
+        type: String,
+        default: 'Razno',
+        trim: true
+    },
+    branch: {
+        type: String,
+        default: 'Vse veje',
+        trim: true
+    },
     shelf: { 
         type: Schema.Types.ObjectId, 
         ref: 'shelf',

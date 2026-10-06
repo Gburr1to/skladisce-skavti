@@ -11,7 +11,8 @@ import {
   MapPin, 
   Warehouse,
   Edit3,
-  Trash2
+  Trash2,
+  Key
 } from 'lucide-react';
 
 export default function WarehouseRoomPage() {
@@ -295,13 +296,15 @@ export default function WarehouseRoomPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          
+
           <button
             onClick={() => setWarehouseModalOpen(true)}
             className="px-3 py-2 bg-white hover:bg-slate-50 active:scale-95 text-slate-700 border border-slate-300 text-xs font-bold rounded-xl shadow-2xs transition-all flex items-center gap-1.5 shrink-0"
             title="Dodaj novo skladišče"
           >
             <Plus className="w-3.5 h-3.5 text-slate-500" />
-            <span>+ Skladišče</span>
+            <span>Skladišče</span>
           </button>
 
           <button

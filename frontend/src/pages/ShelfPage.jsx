@@ -14,6 +14,7 @@ import {
   X,
   Download
 } from 'lucide-react';
+import { ARTICLE_CATEGORIES, SKAVT_BRANCHES, getBranchColor } from '../constants/skavtData';
 
 export default function ShelfPage() {
   const { id } = useParams();
@@ -30,6 +31,8 @@ export default function ShelfPage() {
   const [artName, setArtName] = useState('');
   const [artDescription, setArtDescription] = useState('');
   const [artQuantity, setArtQuantity] = useState(1);
+  const [artCategory, setArtCategory] = useState('Razno');
+  const [artBranch, setArtBranch] = useState('Vse veje');
   const [savingArt, setSavingArt] = useState(false);
 
   // QR Koda modal
@@ -89,11 +92,15 @@ export default function ShelfPage() {
         name: artName.trim(),
         description: artDescription.trim(),
         quantity: Number(artQuantity) || 1,
+        category: artCategory,
+        branch: artBranch,
         shelf: id
       });
       setArtName('');
       setArtDescription('');
       setArtQuantity(1);
+      setArtCategory('Razno');
+      setArtBranch('Vse veje');
       setArticleModalOpen(false);
       await loadShelfAndArticles();
       showToast('Artikel dodan na polico.');
@@ -113,6 +120,8 @@ export default function ShelfPage() {
         name: editingArticle.name,
         description: editingArticle.description,
         quantity: Number(editingArticle.quantity) || 0,
+        category: editingArticle.category || 'Razno',
+        branch: editingArticle.branch || 'Vse veje',
         shelf: id
       });
       setArticles(prev => prev.map(a => a._id === updated._id ? { ...a, ...updated } : a));
@@ -257,10 +266,22 @@ export default function ShelfPage() {
                 >
                   {/* Zgornja vrstica: Ime in orodja */}
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h3 className="text-base font-bold text-slate-900 leading-snug">
-                        {article.name}
-                      </h3>
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <h3 className="text-base font-bold text-slate-900 leading-snug">
+                          {article.name}
+                        </h3>
+                        {article.category && (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                            {article.category}
+                          </span>
+                        )}
+                        {article.branch && article.branch !== 'Vse veje' && (
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getBranchColor(article.branch)}`}>
+                            {article.branch}
+                          </span>
+                        )}
+                      </div>
                       {article.description && (
                         <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">
                           {article.description}
@@ -381,17 +402,49 @@ export default function ShelfPage() {
                 />
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Začetna količina
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={artQuantity}
+                    onChange={(e) => setArtQuantity(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Kategorija
+                  </label>
+                  <select
+                    value={artCategory}
+                    onChange={(e) => setArtCategory(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  >
+                    {ARTICLE_CATEGORIES.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Začetna količina
+                  Skavtska veja
                 </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={artQuantity}
-                  onChange={(e) => setArtQuantity(e.target.value)}
+                <select
+                  value={artBranch}
+                  onChange={(e) => setArtBranch(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                />
+                >
+                  {SKAVT_BRANCHES.map(b => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="pt-2 flex items-center justify-end gap-2">
@@ -452,17 +505,49 @@ export default function ShelfPage() {
                 />
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Količina
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingArticle.quantity}
+                    onChange={(e) => setEditingArticle({ ...editingArticle, quantity: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Kategorija
+                  </label>
+                  <select
+                    value={editingArticle.category || 'Razno'}
+                    onChange={(e) => setEditingArticle({ ...editingArticle, category: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  >
+                    {ARTICLE_CATEGORIES.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Količina
+                  Skavtska veja
                 </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={editingArticle.quantity}
-                  onChange={(e) => setEditingArticle({ ...editingArticle, quantity: e.target.value })}
+                <select
+                  value={editingArticle.branch || 'Vse veje'}
+                  onChange={(e) => setEditingArticle({ ...editingArticle, branch: e.target.value })}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                />
+                >
+                  {SKAVT_BRANCHES.map(b => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="pt-2 flex items-center justify-end gap-2">

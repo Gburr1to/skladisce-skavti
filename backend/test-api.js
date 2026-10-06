@@ -76,6 +76,7 @@ async function runTests() {
     let createdShelfId = null;
     let createdArticleId = null;
     let createdArticleQR = null;
+    let createdBatchArticleId = null;
     let createdShoppingId = null;
     const testKeyHolderName = `TestIme_${TEST_PREFIX}`;
 
@@ -143,6 +144,15 @@ async function runTests() {
         const getKeyRes = await request(baseUrl, 'GET', '/users/key-holders');
         assert(getKeyRes.status === 200 && Array.isArray(getKeyRes.data), 'GET /users/key-holders vrne seznam');
         assert(typeof getKeyRes.data[0] === 'string', 'Kriterij TODO izpolnjen: elementi so zgolj nizi (imena), ne objekti');
+
+        // Pridobi imetnike s podrobnostmi (detailed=true)
+        const getDetailedKeyRes = await request(baseUrl, 'GET', '/users/key-holders?detailed=true');
+        assert(getDetailedKeyRes.status === 200 && Array.isArray(getDetailedKeyRes.data), 'GET /users/key-holders?detailed=true vrne objekte');
+        assert(typeof getDetailedKeyRes.data[0] === 'object' && getDetailedKeyRes.data[0].name, 'Podrobni podatki imetnika vsebujejo ime');
+
+        // Test varnostne konfiguracije za imetnike ključa
+        const confRes = await request(baseUrl, 'GET', '/users/key-holders/config');
+        assert(confRes.status === 200 && typeof confRes.data.isConfigured === 'boolean', 'GET /users/key-holders/config vrne konfiguracijo');
 
         // Izbriši imetnika
         const delKeyRes = await request(baseUrl, 'DELETE', `/users/key-holders/${encodeURIComponent(testKeyHolderName)}`);
@@ -233,15 +243,40 @@ async function runTests() {
         const articleRes = await request(baseUrl, 'POST', '/article', {
             name: `Veliki Taborniški Šotor ${TEST_PREFIX}`,
             description: 'Šotor za 6 oseb z aluminijastimi palicami',
+            category: 'Šotori & tabor',
+            branch: 'Izvidniki (IV)',
             quantity: 3,
             shelf: createdShelfId,
             picture: 'https://example.com/sotor.jpg'
         });
         assert(articleRes.status === 201 && articleRes.data._id, 'POST /article ustvari nov artikel');
+        assert(articleRes.data.category === 'Šotori & tabor', 'Artikel ima shranjeno kategorijo (Šotori & tabor)');
+        assert(articleRes.data.branch === 'Izvidniki (IV)', 'Artikel ima shranjeno skavtsko vejo (Izvidniki (IV))');
         assert(articleRes.data.qr && articleRes.data.qr.startsWith('SKAVT-ART-'), 'Avtomatsko generirana unikatna QR koda');
         assert(articleRes.data.qrImage && articleRes.data.qrImage.startsWith('data:image/png;base64,'), 'Avtomatsko generirana QR slika v Base64 obliki');
         createdArticleId = articleRes.data._id;
         createdArticleQR = articleRes.data.qr;
+
+        // Masovni uvoz artiklov (Batch import za Excel / CSV)
+        const batchRes = await request(baseUrl, 'POST', '/article/batch', {
+            items: [
+                {
+                    name: `Vodenke za ustvarjanje ${TEST_PREFIX}`,
+                    quantity: 12,
+                    category: 'Ustvarjanje',
+                    branch: 'Bobri (BB)',
+                    description: 'Komplet barv'
+                }
+            ]
+        });
+        assert(batchRes.status === 201 && batchRes.data.count >= 1, 'POST /article/batch uspešno masovno uvozi artikle');
+        createdBatchArticleId = batchRes.data.articles?.[0]?._id;
+
+        // Zaščita ob uvozu napačnega seznama (diagnostika kje je napaka)
+        const badBatchRes = await request(baseUrl, 'POST', '/article/batch', {
+            items: [{ name: '', quantity: -5 }]
+        });
+        assert(badBatchRes.status === 400 && Array.isArray(badBatchRes.data.errors) && badBatchRes.data.errors.length > 0, 'POST /article/batch zaščitni mehanizem prepozna napako in vrne diagnostiko');
 
         // Artikli na polici (Ideje točka 11)
         const shelfArticlesRes = await request(baseUrl, 'GET', `/shelf/${createdShelfId}/articles`);
@@ -253,6 +288,10 @@ async function runTests() {
         const foundArticle = searchRes.data.find(a => a._id === createdArticleId);
         assert(foundArticle && foundArticle.shelf && foundArticle.shelf.name, 'Najdeni artikel vsebuje podatke o polici');
         assert(foundArticle && foundArticle.shelf.closet && foundArticle.shelf.closet.name, 'Polica artikla vsebuje podatke o omari (celotna pot lokacije)');
+
+        // Iskanje po kategoriji
+        const catSearchRes = await request(baseUrl, 'GET', '/article?category=Ustvarjanje');
+        assert(catSearchRes.status === 200 && catSearchRes.data.some(a => a._id === createdBatchArticleId), 'GET /article?category=... filtrira po kategoriji');
 
         // Iskanje artikla po QR kodi (skeniranje s kamero)
         const qrSearchRes = await request(baseUrl, 'GET', `/article/qr/${createdArticleQR}`);
@@ -339,6 +378,10 @@ async function runTests() {
         if (createdArticleId) {
             const delArt = await request(baseUrl, 'DELETE', `/article/${createdArticleId}`);
             assert(delArt.status === 200, 'DELETE /article/:id uspešno izbrisan');
+        }
+        if (createdBatchArticleId) {
+            const delBatchArt = await request(baseUrl, 'DELETE', `/article/${createdBatchArticleId}`);
+            assert(delBatchArt.status === 200, 'DELETE /article/:id (batch) uspešno izbrisan');
         }
         if (createdShelfId) {
             const delShelf = await request(baseUrl, 'DELETE', `/shelf/${createdShelfId}`);

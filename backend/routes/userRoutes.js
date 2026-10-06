@@ -87,49 +87,14 @@ router.get('/logout', userController.logout);
  *                 type: string
  *               example: ["Janez Novak", "Micka Kovač", "Luka Skavt"]
  */
+router.get('/key-holders/config', userController.getKeyHolderConfig);
+router.post('/key-holders/config/setup', userController.setupKeyHolderConfig);
+router.post('/key-holders/config/verify', userController.verifyKeyHolderPassword);
+router.post('/key-holders/config/change-email', userController.changeKeyHolderRecoveryEmail);
+router.post('/key-holders/config/reset', userController.resetKeyHolderPassword);
+
 router.get('/key-holders', userController.listKeyHolders);
-
-/**
- * @swagger
- * /users/key-holders:
- *   post:
- *     summary: Doda novo ime na seznam imetnikov ključa
- *     tags: [Users]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - name
- *             properties:
- *               name:
- *                 type: string
- *                 example: "Tone Vodnik"
- *     responses:
- *       201:
- *         description: Posodobljen seznam imen imetnikov ključa
- */
 router.post('/key-holders', userController.addKeyHolder);
-
-/**
- * @swagger
- * /users/key-holders/{name}:
- *   delete:
- *     summary: Odstrani ime s seznama imetnikov ključa
- *     tags: [Users]
- *     parameters:
- *       - in: path
- *         name: name
- *         required: true
- *         schema:
- *           type: string
- *         description: Ime osebe za odstranitev
- *     responses:
- *       200:
- *         description: Posodobljen seznam imen imetnikov ključa
- */
 router.delete('/key-holders/:name', userController.removeKeyHolder);
 
 /**

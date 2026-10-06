@@ -120,6 +120,7 @@ router.get('/:id', articleController.show);
  *         description: Artikel uspešno ustvarjen z generirano QR kodo
  */
 router.post('/', articleController.create);
+router.post('/batch', articleController.batch);
 
 /**
  * @swagger

@@ -78,11 +78,9 @@ export default function BorrowingsPage() {
       <div className="flex items-center justify-between gap-3 pt-1">
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-            Trenutne izposoje
+            Izposoje
           </h1>
-          <p className="text-xs text-slate-500">
-            Pregled trenutno aktivne izposojene opreme
-          </p>
+         
         </div>
 
         <span className="text-xs font-bold px-2.5 py-1 bg-amber-50 text-amber-900 rounded-lg border border-amber-200">

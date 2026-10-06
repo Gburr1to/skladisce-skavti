@@ -1,4 +1,11 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const getApiUrl = () => {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (typeof window !== 'undefined' && window.location && window.location.hostname) {
+    return `${window.location.protocol}//${window.location.hostname}:3000`;
+  }
+  return 'http://localhost:3000';
+};
+const API_URL = getApiUrl();
 
 async function request(endpoint, options = {}) {
   const token = localStorage.getItem('skavt_token');
@@ -84,14 +91,27 @@ export const api = {
     request(`/shelf/${id}`, { method: 'DELETE' }),
 
   // Articles (Artikli)
-  getArticles: () => 
-    request('/article'),
-  searchArticles: (query) => 
-    request(`/article/search?q=${encodeURIComponent(query || '')}`),
+  getArticles: (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.category && params.category !== 'Vse') query.append('category', params.category);
+    if (params.branch && params.branch !== 'Vse veje' && params.branch !== 'Vse') query.append('branch', params.branch);
+    if (params.shelf) query.append('shelf', params.shelf);
+    const qs = query.toString();
+    return request(qs ? `/article?${qs}` : '/article');
+  },
+  searchArticles: (query, params = {}) => {
+    const qp = new URLSearchParams();
+    if (query) qp.append('q', query);
+    if (params.category && params.category !== 'Vse') qp.append('category', params.category);
+    if (params.branch && params.branch !== 'Vse veje' && params.branch !== 'Vse') qp.append('branch', params.branch);
+    return request(`/article/search?${qp.toString()}`);
+  },
   getArticle: (id) => 
     request(`/article/${id}`),
   createArticle: (data) => 
     request('/article', { method: 'POST', body: JSON.stringify(data) }),
+  batchImportArticles: (items) =>
+    request('/article/batch', { method: 'POST', body: JSON.stringify({ items }) }),
   updateArticle: (id, data) => 
     request(`/article/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteArticle: (id) => 
@@ -114,12 +134,47 @@ export const api = {
     request(`/borrow/${id}`, { method: 'DELETE' }),
 
   // Key Holders (Imetniki ključa)
-  getKeyHolders: () => 
-    request('/users/key-holders'),
-  addKeyHolder: (name) => 
-    request('/users/key-holders', { method: 'POST', body: JSON.stringify({ name }) }),
-  removeKeyHolder: (name) => 
-    request(`/users/key-holders/${encodeURIComponent(name)}`, { method: 'DELETE' }),
+  getKeyHolders: (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.detailed !== false) query.append('detailed', 'true');
+    if (params.warehouse && params.warehouse !== 'all') query.append('warehouse', params.warehouse);
+    const qs = query.toString();
+    return request(qs ? `/users/key-holders?${qs}` : '/users/key-holders');
+  },
+  addKeyHolder: (data) => 
+    request('/users/key-holders?detailed=true', { 
+      method: 'POST', 
+      body: JSON.stringify(typeof data === 'string' ? { name: data } : data) 
+    }),
+  removeKeyHolder: (identifier, password) => {
+    const query = new URLSearchParams({ detailed: 'true' });
+    if (password) query.append('password', password);
+    return request(`/users/key-holders/${encodeURIComponent(identifier)}?${query.toString()}`, { 
+      method: 'DELETE' 
+    });
+  },
+  getKeyHolderConfig: () =>
+    request('/users/key-holders/config'),
+  setupKeyHolderConfig: (data) =>
+    request('/users/key-holders/config/setup', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+  verifyKeyHolderPassword: (password) =>
+    request('/users/key-holders/config/verify', {
+      method: 'POST',
+      body: JSON.stringify({ password })
+    }),
+  changeKeyHolderRecoveryEmail: (data) =>
+    request('/users/key-holders/config/change-email', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+  resetKeyHolderPassword: (data) =>
+    request('/users/key-holders/config/reset', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
 
   // Shopping / Nakupovalni seznam (artikli za nakup)
   getShoppingList: () => 

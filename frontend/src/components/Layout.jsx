@@ -9,6 +9,7 @@ import {
   Package, 
   HandHelping, 
   ShoppingCart,
+  Key,
   LogOut, 
   CheckCircle2, 
   AlertCircle
@@ -26,15 +27,16 @@ export default function Layout({ children }) {
   };
 
   const navLinks = [
-    { name: 'Skladišča', path: '/', icon: Archive },
-    { name: 'Artikli', path: '/artikli', icon: Package },
+    { name: 'Artikli', path: '/', icon: Package },
+    { name: 'Skladišča', path: '/skladisca', icon: Archive },
     { 
       name: 'Izposoje', 
       path: '/izposoje', 
       icon: HandHelping, 
       badge: activeBorrows.length > 0 ? activeBorrows.length : null 
     },
-    { name: 'Nakupi', path: '/nakupi', icon: ShoppingCart }
+    { name: 'Nakupi', path: '/nakupi', icon: ShoppingCart },
+    { name: 'Ključi', path: '/kljuci', icon: Key }
   ];
 
   return (

@@ -142,9 +142,6 @@ export default function ShoppingPage() {
             <ShoppingCart className="w-6 h-6 text-emerald-700" />
             <span>Nakupovalni seznam</span>
           </h1>
-          <p className="text-xs text-slate-500">
-            Evidenca opreme in artiklov, ki jih je potrebno kupiti
-          </p>
         </div>
 
         {/* Zavihki */}
