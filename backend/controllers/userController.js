@@ -4,6 +4,7 @@ const KeyHolderConfigModel = require('../models/keyHolderConfigModel.js');
 const jwt = require('jsonwebtoken');
 const { requireJwtSecret } = require('../config/auth.js');
 const mongoose = require('mongoose');
+const { sendResetCodeEmail } = require('../config/mailer.js');
 
 /**
  * Pomožna funkcija za preverjanje varnostnega gesla za imetnike ključa
@@ -277,6 +278,117 @@ module.exports = {
         } catch (err) {
             return res.status(500).json({
                 message: 'Napaka pri spreminjanju emaila.',
+                error: err.message
+            });
+        }
+    },
+
+    /**
+     * Menjava obstoječega gesla (zahteva vpis trenutnega gesla in novega gesla)
+     */
+    changeKeyHolderPassword: async function (req, res) {
+        try {
+            const { currentPassword, newPassword } = req.body;
+            if (!currentPassword || !newPassword || !newPassword.trim()) {
+                return res.status(400).json({ message: 'Trenutno in novo geslo sta obvezni.' });
+            }
+
+            const config = await KeyHolderConfigModel.findOne();
+            if (!config || !config.isConfigured) {
+                return res.status(400).json({ message: 'Varnost še ni konfigurirana.' });
+            }
+
+            if (String(currentPassword).trim() !== String(config.password).trim()) {
+                return res.status(401).json({ message: 'Napačno trenutno geslo.' });
+            }
+
+            config.password = newPassword.trim();
+            await config.save();
+
+            return res.json({ message: 'Geslo uspešno spremenjeno.' });
+        } catch (err) {
+            return res.status(500).json({
+                message: 'Napaka pri menjavi gesla.',
+                error: err.message
+            });
+        }
+    },
+
+    /**
+     * Zahteva za pošiljanje verifikacijske kode na registrirani Gmail za ponastavitev gesla
+     */
+    requestResetCode: async function (req, res) {
+        try {
+            const { recoveryEmail } = req.body;
+            const config = await KeyHolderConfigModel.findOne();
+            if (!config || !config.isConfigured || !config.recoveryEmail) {
+                return res.status(400).json({ message: 'Varnost ali obnovitveni Gmail še nista nastavljena.' });
+            }
+
+            if (recoveryEmail) {
+                const emailMatch = String(recoveryEmail).trim().toLowerCase() === String(config.recoveryEmail).trim().toLowerCase();
+                if (!emailMatch) {
+                    return res.status(403).json({ message: 'Vneseni Gmail naslov se ne ujema z registriranim naslovom vodje.' });
+                }
+            }
+
+            // Generiranje 6-mestne naključne številčne kode
+            const code = Math.floor(100000 + Math.random() * 900000).toString();
+            config.resetCode = code;
+            config.resetCodeExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // Veljavnost 15 minut
+            await config.save();
+
+            await sendResetCodeEmail(config.recoveryEmail, code);
+
+            return res.json({
+                message: `Varnostna koda za preverjanje je bila poslana na ${maskEmail(config.recoveryEmail)}.`,
+                recoveryEmailMasked: maskEmail(config.recoveryEmail),
+                devCode: process.env.NODE_ENV !== 'production' ? code : undefined
+            });
+        } catch (err) {
+            return res.status(500).json({
+                message: 'Napaka pri generiranju in pošiljanju kode.',
+                error: err.message
+            });
+        }
+    },
+
+    /**
+     * Ponastavitev gesla z vnosom verifikacijske kode (preverjanje dostopa do emaila)
+     */
+    resetKeyHolderPasswordWithCode: async function (req, res) {
+        try {
+            const { code, newPassword } = req.body;
+            if (!code || !newPassword || !newPassword.trim()) {
+                return res.status(400).json({ message: 'Varnostna koda in novo geslo sta obvezna.' });
+            }
+
+            const config = await KeyHolderConfigModel.findOne();
+            if (!config || !config.isConfigured) {
+                return res.status(400).json({ message: 'Varnost še ni konfigurirana.' });
+            }
+
+            if (!config.resetCode || !config.resetCodeExpiresAt) {
+                return res.status(400).json({ message: 'Zahteva za ponastavitev ni bila sprožena ali je že bila uporabljena.' });
+            }
+
+            if (new Date() > config.resetCodeExpiresAt) {
+                return res.status(400).json({ message: 'Varnostna koda je potekla. Prosimo zahtevajte novo.' });
+            }
+
+            if (String(code).trim() !== String(config.resetCode).trim()) {
+                return res.status(400).json({ message: 'Napačna varnostna koda.' });
+            }
+
+            config.password = newPassword.trim();
+            config.resetCode = null;
+            config.resetCodeExpiresAt = null;
+            await config.save();
+
+            return res.json({ message: 'Geslo uspešno ponastavljeno.' });
+        } catch (err) {
+            return res.status(500).json({
+                message: 'Napaka pri ponastavitvi gesla.',
                 error: err.message
             });
         }

@@ -16,7 +16,9 @@ import {
   Settings, 
   Check, 
   HelpCircle,
-  KeyRound
+  KeyRound,
+  Send,
+  RefreshCw
 } from 'lucide-react';
 
 export default function KeyHoldersPage() {
@@ -40,23 +42,38 @@ export default function KeyHoldersPage() {
   const [newNote, setNewNote] = useState('');
   const [adding, setAdding] = useState(false);
 
-  // Modali za varnost
+  // Modal: Začetna konfiguracija varnosti
   const [setupModalOpen, setSetupModalOpen] = useState(false);
   const [setupPassword, setSetupPassword] = useState('');
   const [setupConfirmPassword, setSetupConfirmPassword] = useState('');
   const [setupEmail, setSetupEmail] = useState('');
   const [setupLoading, setSetupLoading] = useState(false);
 
+  // Modal: Odklep z geslom
   const [unlockModalOpen, setUnlockModalOpen] = useState(false);
   const [unlockInputPassword, setUnlockInputPassword] = useState('');
   const [unlockLoading, setUnlockLoading] = useState(false);
-  const [pendingAction, setPendingAction] = useState(null); // Akcija, ki se izvede po odklepu
+  const [pendingAction, setPendingAction] = useState(null);
 
+  // Modal: Menjava gesla (ko poznaš trenutno geslo)
+  const [changePasswordModalOpen, setChangePasswordModalOpen] = useState(false);
+  const [changeCurrentPassword, setChangeCurrentPassword] = useState('');
+  const [changeNewPassword, setChangeNewPassword] = useState('');
+  const [changeConfirmPassword, setChangeConfirmPassword] = useState('');
+  const [changePasswordLoading, setChangePasswordLoading] = useState(false);
+
+  // Modal: Ponastavitev gesla z verifikacijsko kodo na Gmail
   const [resetModalOpen, setResetModalOpen] = useState(false);
-  const [resetEmail, setResetEmail] = useState('');
+  const [resetStep, setResetStep] = useState(1); // 1 = pošlji kodo, 2 = vnesi kodo & novo geslo
+  const [resetEmailInput, setResetEmailInput] = useState('');
+  const [resetCode, setResetCode] = useState('');
   const [resetNewPassword, setResetNewPassword] = useState('');
-  const [resetLoading, setResetLoading] = useState(false);
+  const [resetConfirmPassword, setResetConfirmPassword] = useState('');
+  const [resetSendingCode, setResetSendingCode] = useState(false);
+  const [resetVerifyingCode, setResetVerifyingCode] = useState(false);
+  const [devCodeHint, setDevCodeHint] = useState('');
 
+  // Modal: Sprememba Gmail naslova
   const [changeEmailModalOpen, setChangeEmailModalOpen] = useState(false);
   const [changeEmailPassword, setChangeEmailPassword] = useState('');
   const [changeEmailNewEmail, setChangeEmailNewEmail] = useState('');
@@ -98,7 +115,6 @@ export default function KeyHoldersPage() {
       return holders;
     }
     return holders.filter(h => {
-      // Prikaz tistih z določenim skladiščem ALI tistih z dostopom do vseh skladišč (brez določenega)
       const whId = h.warehouse?._id || h.warehouse;
       return whId === selectedWarehouse || !whId;
     });
@@ -183,26 +199,89 @@ export default function KeyHoldersPage() {
     }
   };
 
-  // Ponastavitev pozabljenega gesla prek Gmaila
-  const handleResetPassword = async (e) => {
+  // Menjava obstoječega gesla (ko poznaš trenutno geslo)
+  const handleChangePassword = async (e) => {
     e.preventDefault();
+    if (changeNewPassword !== changeConfirmPassword) {
+      alert('Novi gesli se ne ujemata.');
+      return;
+    }
+
     try {
-      setResetLoading(true);
-      await api.resetKeyHolderPassword({
-        recoveryEmail: resetEmail,
+      setChangePasswordLoading(true);
+      await api.changeKeyHolderPassword({
+        currentPassword: changeCurrentPassword,
+        newPassword: changeNewPassword
+      });
+
+      setSessionPassword(changeNewPassword);
+      setIsEditUnlocked(true);
+      setChangePasswordModalOpen(false);
+      setChangeCurrentPassword('');
+      setChangeNewPassword('');
+      setChangeConfirmPassword('');
+      showToast('Geslo za urejanje seznama uspešno posodobljeno.');
+    } catch (err) {
+      showToast(err.message || 'Napaka pri menjavi gesla.', 'error');
+    } finally {
+      setChangePasswordLoading(false);
+    }
+  };
+
+  // Pošiljanje verifikacijske kode na Gmail
+  const handleSendResetCode = async (e) => {
+    if (e) e.preventDefault();
+
+    try {
+      setResetSendingCode(true);
+      const res = await api.requestKeyHolderResetCode({
+        recoveryEmail: resetEmailInput.trim() || undefined
+      });
+
+      setResetStep(2);
+      if (res.devCode) {
+        setDevCodeHint(res.devCode);
+      }
+      showToast(res.message || 'Varnostna koda je bila poslana na Gmail.');
+    } catch (err) {
+      showToast(err.message || 'Napaka pri pošiljanju kode.', 'error');
+    } finally {
+      setResetSendingCode(false);
+    }
+  };
+
+  // Ponastavitev gesla z vnosom prejete kode
+  const handleResetPasswordWithCode = async (e) => {
+    e.preventDefault();
+    if (resetNewPassword !== resetConfirmPassword) {
+      alert('Novi gesli se ne ujemata.');
+      return;
+    }
+    if (!resetCode.trim()) {
+      alert('Vnesite 6-mestno varnostno kodo.');
+      return;
+    }
+
+    try {
+      setResetVerifyingCode(true);
+      await api.resetKeyHolderPasswordWithCode({
+        code: resetCode.trim(),
         newPassword: resetNewPassword
       });
 
-      setResetModalOpen(false);
-      setResetEmail('');
-      setResetNewPassword('');
       setIsEditUnlocked(true);
       setSessionPassword(resetNewPassword);
-      showToast('Geslo uspešno ponastavljeno! Urejanje je odklenjeno.');
+      setResetModalOpen(false);
+      setResetStep(1);
+      setResetCode('');
+      setResetNewPassword('');
+      setResetConfirmPassword('');
+      setDevCodeHint('');
+      showToast('Geslo uspešno ponastavljeno z verifikacijsko kodo!');
     } catch (err) {
       showToast(err.message || 'Napaka pri ponastavitvi gesla.', 'error');
     } finally {
-      setResetLoading(false);
+      setResetVerifyingCode(false);
     }
   };
 
@@ -304,7 +383,7 @@ export default function KeyHoldersPage() {
         </div>
 
         {/* Status varnosti in orodja */}
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
           {!securityConfig.isConfigured ? (
             <button
               onClick={() => setSetupModalOpen(true)}
@@ -319,19 +398,36 @@ export default function KeyHoldersPage() {
                 <Unlock className="w-3.5 h-3.5 text-emerald-700" />
                 <span>Odklenjeno</span>
               </span>
+
+              {/* Možnost menjave gesla */}
               <button
-                onClick={handleLockEditing}
-                className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded-lg transition-colors"
-                title="Zakleni urejanje"
+                onClick={() => {
+                  setChangeCurrentPassword(sessionPassword || '');
+                  setChangeNewPassword('');
+                  setChangeConfirmPassword('');
+                  setChangePasswordModalOpen(true);
+                }}
+                className="px-2.5 py-1 text-slate-600 hover:text-slate-900 hover:bg-slate-200/80 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
+                title="Menjava gesla"
               >
-                <Lock className="w-4 h-4" />
+                <KeyRound className="w-3.5 h-3.5 text-emerald-700" />
+                <span>Menjava gesla</span>
               </button>
+
               <button
                 onClick={() => setChangeEmailModalOpen(true)}
                 className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded-lg transition-colors"
                 title="Spremeni obnovitveni Gmail"
               >
                 <Settings className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={handleLockEditing}
+                className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded-lg transition-colors"
+                title="Zakleni urejanje"
+              >
+                <Lock className="w-4 h-4" />
               </button>
             </div>
           ) : (
@@ -347,12 +443,21 @@ export default function KeyHoldersPage() {
                 <Lock className="w-3.5 h-3.5 text-amber-400" />
                 <span>Odkleni urejanje</span>
               </button>
+
               <button
-                onClick={() => setChangeEmailModalOpen(true)}
-                className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded-lg transition-colors"
-                title="Spremeni obnovitveni Gmail"
+                onClick={() => {
+                  setResetStep(1);
+                  setResetEmailInput('');
+                  setResetCode('');
+                  setResetNewPassword('');
+                  setResetConfirmPassword('');
+                  setResetModalOpen(true);
+                }}
+                className="px-2.5 py-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70 text-xs font-semibold rounded-xl flex items-center gap-1 transition-all"
+                title="Ponastavitev z email kodo"
               >
-                <Settings className="w-4 h-4" />
+                <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
+                <span>Pozabljeno geslo?</span>
               </button>
             </div>
           )}
@@ -537,7 +642,7 @@ export default function KeyHoldersPage() {
         )}
       </div>
 
-      {/* MODAL: Nastavitev gesla in Gmaila za vodjo */}
+      {/* MODAL 1: Nastavitev gesla in Gmaila za vodjo */}
       {setupModalOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/50 backdrop-blur-xs">
           <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl max-w-md w-full border border-slate-200 p-5 space-y-4 animate-in slide-in-from-bottom-4 duration-150">
@@ -587,7 +692,7 @@ export default function KeyHoldersPage() {
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Gmail vodje (za obnovitev ob izgubi gesla) *
+                  Gmail vodje (za preverjanje ob pozabljenem geslu) *
                 </label>
                 <input
                   type="email"
@@ -620,7 +725,7 @@ export default function KeyHoldersPage() {
         </div>
       )}
 
-      {/* MODAL: Odklep urejanja z geslom */}
+      {/* MODAL 2: Odklep urejanja z geslom */}
       {unlockModalOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/50 backdrop-blur-xs">
           <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl max-w-sm w-full border border-slate-200 p-5 space-y-4 animate-in slide-in-from-bottom-4 duration-150">
@@ -657,6 +762,11 @@ export default function KeyHoldersPage() {
                   type="button"
                   onClick={() => {
                     setUnlockModalOpen(false);
+                    setResetStep(1);
+                    setResetEmailInput('');
+                    setResetCode('');
+                    setResetNewPassword('');
+                    setResetConfirmPassword('');
                     setResetModalOpen(true);
                   }}
                   className="text-xs text-emerald-800 font-semibold hover:underline flex items-center gap-1"
@@ -687,38 +797,36 @@ export default function KeyHoldersPage() {
         </div>
       )}
 
-      {/* MODAL: Ponastavitev pozabljenega gesla (prek Gmaila vodje) */}
-      {resetModalOpen && (
+      {/* MODAL 3: Menjava gesla (ko poznaš trenutno geslo) */}
+      {changePasswordModalOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/50 backdrop-blur-xs">
           <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl max-w-md w-full border border-slate-200 p-5 space-y-4 animate-in slide-in-from-bottom-4 duration-150">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center">
-                  <Mail className="w-5 h-5" />
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center">
+                  <KeyRound className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">Ponastavitev gesla</h3>
-                  <p className="text-[11px] text-slate-500">
-                    Vnesite registrirani Gmail vodje ({securityConfig.recoveryEmailMasked || 'Gmail vodje'})
-                  </p>
+                  <h3 className="text-sm font-bold text-slate-900">Menjava gesla</h3>
+                  <p className="text-[11px] text-slate-500">Spremenite obstoječe geslo za urejanje seznama</p>
                 </div>
               </div>
-              <button onClick={() => setResetModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-1">
+              <button onClick={() => setChangePasswordModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-1">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleResetPassword} className="space-y-3">
+            <form onSubmit={handleChangePassword} className="space-y-3">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Registrirani Gmail naslov *
+                  Trenutno veljavno geslo *
                 </label>
                 <input
-                  type="email"
+                  type="password"
                   required
-                  placeholder="Vnesite celotni Gmail naslov..."
-                  value={resetEmail}
-                  onChange={(e) => setResetEmail(e.target.value)}
+                  placeholder="Vnesite trenutno geslo..."
+                  value={changeCurrentPassword}
+                  onChange={(e) => setChangeCurrentPassword(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
                 />
               </div>
@@ -731,8 +839,22 @@ export default function KeyHoldersPage() {
                   type="password"
                   required
                   placeholder="Vnesite novo geslo..."
-                  value={resetNewPassword}
-                  onChange={(e) => setResetNewPassword(e.target.value)}
+                  value={changeNewPassword}
+                  onChange={(e) => setChangeNewPassword(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Ponovite novo geslo *
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Ponovite novo geslo..."
+                  value={changeConfirmPassword}
+                  onChange={(e) => setChangeConfirmPassword(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
                 />
               </div>
@@ -740,17 +862,17 @@ export default function KeyHoldersPage() {
               <div className="pt-2 flex items-center justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setResetModalOpen(false)}
+                  onClick={() => setChangePasswordModalOpen(false)}
                   className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl"
                 >
                   Prekliči
                 </button>
                 <button
                   type="submit"
-                  disabled={resetLoading}
+                  disabled={changePasswordLoading}
                   className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs disabled:opacity-60"
                 >
-                  {resetLoading ? 'Ponastavljam...' : 'Ponastavi geslo'}
+                  {changePasswordLoading ? 'Shranjujem...' : 'Spremeni geslo'}
                 </button>
               </div>
             </form>
@@ -758,7 +880,176 @@ export default function KeyHoldersPage() {
         </div>
       )}
 
-      {/* MODAL: Sprememba Gmail naslova (zahteva vpis trenutnega gesla) */}
+      {/* MODAL 4: Ponastavitev gesla s preverjanjem (kodo) na Gmail */}
+      {resetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl max-w-md w-full border border-slate-200 p-5 space-y-4 animate-in slide-in-from-bottom-4 duration-150">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Ponastavitev gesla z e-pošto</h3>
+                  <p className="text-[11px] text-slate-500">
+                    Preverjanje dostopa do registriranega Gmaila ({securityConfig.recoveryEmailMasked || 'Gmail vodje'})
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setResetModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {resetStep === 1 ? (
+              /* KORAK 1: Pošiljanje verifikacijske kode */
+              <div className="space-y-4">
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-700 leading-relaxed">
+                  Za potrditev, da ste pooblaščeni za spreminjanje gesla, bomo na naslov{' '}
+                  <strong className="text-slate-900">{securityConfig.recoveryEmailMasked}</strong> poslali enkratno 6-mestno varnostno kodo.
+                </div>
+
+                <form onSubmit={handleSendResetCode} className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      Potrdite vaš Gmail naslov (opcijsko za dodatno varnost)
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="npr. vodja@gmail.com..."
+                      value={resetEmailInput}
+                      onChange={(e) => setResetEmailInput(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    />
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setResetModalOpen(false)}
+                      className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl"
+                    >
+                      Prekliči
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={resetSendingCode}
+                      className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 disabled:opacity-60"
+                    >
+                      {resetSendingCode ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Send className="w-4 h-4" />
+                      )}
+                      <span>Pošlji kodo na email</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+            ) : (
+              /* KORAK 2: Vnos kode in nastavitev novega gesla */
+              <div className="space-y-4">
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-950 flex items-start gap-2">
+                  <Check className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+                  <p>
+                    Varnostna koda je bila poslana na vaš Gmail. Vpišite prejeto kodo in izberite novo geslo.
+                  </p>
+                </div>
+
+                {devCodeHint && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-[11px] text-amber-900 font-mono flex items-center justify-between">
+                    <span>Lokalni testni namig kode: <strong>{devCodeHint}</strong></span>
+                    <button 
+                      type="button" 
+                      onClick={() => setResetCode(devCodeHint)}
+                      className="underline font-bold text-amber-950 ml-2"
+                    >
+                      Vstavi kodo
+                    </button>
+                  </div>
+                )}
+
+                <form onSubmit={handleResetPasswordWithCode} className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      6-mestna koda iz e-pošte *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      autoFocus
+                      maxLength={6}
+                      placeholder="npr. 839210"
+                      value={resetCode}
+                      onChange={(e) => setResetCode(e.target.value.replace(/\D/g, ''))}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-center text-lg font-mono font-bold tracking-widest focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      Novo geslo *
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      placeholder="Vnesite novo geslo..."
+                      value={resetNewPassword}
+                      onChange={(e) => setResetNewPassword(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      Ponovite novo geslo *
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      placeholder="Ponovite novo geslo..."
+                      value={resetConfirmPassword}
+                      onChange={(e) => setResetConfirmPassword(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    />
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={handleSendResetCode}
+                      disabled={resetSendingCode}
+                      className="text-xs text-slate-500 hover:text-emerald-800 underline flex items-center gap-1"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${resetSendingCode ? 'animate-spin' : ''}`} />
+                      <span>Pošlji kodo ponovno</span>
+                    </button>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setResetStep(1)}
+                        className="px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl"
+                      >
+                        Nazaj
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={resetVerifyingCode || !resetCode.trim()}
+                        className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs disabled:opacity-60"
+                      >
+                        {resetVerifyingCode ? 'Preverjam...' : 'Potrdi kodo in shrani'}
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 5: Sprememba Gmail naslova (zahteva vpis trenutnega gesla) */}
       {changeEmailModalOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/50 backdrop-blur-xs">
           <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl max-w-md w-full border border-slate-200 p-5 space-y-4 animate-in slide-in-from-bottom-4 duration-150">

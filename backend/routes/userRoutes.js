@@ -90,7 +90,10 @@ router.get('/logout', userController.logout);
 router.get('/key-holders/config', userController.getKeyHolderConfig);
 router.post('/key-holders/config/setup', userController.setupKeyHolderConfig);
 router.post('/key-holders/config/verify', userController.verifyKeyHolderPassword);
+router.post('/key-holders/config/change-password', userController.changeKeyHolderPassword);
 router.post('/key-holders/config/change-email', userController.changeKeyHolderRecoveryEmail);
+router.post('/key-holders/config/request-reset-code', userController.requestResetCode);
+router.post('/key-holders/config/reset-with-code', userController.resetKeyHolderPasswordWithCode);
 router.post('/key-holders/config/reset', userController.resetKeyHolderPassword);
 
 router.get('/key-holders', userController.listKeyHolders);

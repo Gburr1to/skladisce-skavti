@@ -170,6 +170,21 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data)
     }),
+  changeKeyHolderPassword: (data) =>
+    request('/users/key-holders/config/change-password', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+  requestKeyHolderResetCode: (data = {}) =>
+    request('/users/key-holders/config/request-reset-code', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+  resetKeyHolderPasswordWithCode: (data) =>
+    request('/users/key-holders/config/reset-with-code', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
   resetKeyHolderPassword: (data) =>
     request('/users/key-holders/config/reset', {
       method: 'POST',

@@ -3,7 +3,7 @@ const Schema = mongoose.Schema;
 
 /**
  * Configuration model for KeyHolders management security settings.
- * Stores administrator password and recovery email.
+ * Stores administrator password, recovery email and temporary reset verification codes.
  */
 const keyHolderConfigSchema = new Schema({
     password: {
@@ -19,6 +19,14 @@ const keyHolderConfigSchema = new Schema({
     isConfigured: {
         type: Boolean,
         default: false
+    },
+    resetCode: {
+        type: String,
+        default: null
+    },
+    resetCodeExpiresAt: {
+        type: Date,
+        default: null
     }
 }, {
     timestamps: true
