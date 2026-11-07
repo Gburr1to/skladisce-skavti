@@ -20,16 +20,29 @@ async function sendResetCodeEmail(to, code) {
         const smtpPass = process.env.SMTP_PASS || process.env.GMAIL_PASS;
 
         if (smtpUser && smtpPass) {
-            const transporter = nodemailer.createTransport({
-                service: process.env.SMTP_SERVICE || 'gmail',
-                host: process.env.SMTP_HOST || 'smtp.gmail.com',
-                port: Number(process.env.SMTP_PORT) || 587,
-                secure: process.env.SMTP_SECURE === 'true',
+            const transportOptions = {
                 auth: {
                     user: smtpUser,
                     pass: smtpPass
                 }
-            });
+            };
+
+            if (process.env.SMTP_SERVICE) {
+                transportOptions.service = process.env.SMTP_SERVICE;
+            } else if (process.env.SMTP_HOST) {
+                transportOptions.host = process.env.SMTP_HOST;
+                transportOptions.port = Number(process.env.SMTP_PORT) || 587;
+                transportOptions.secure = process.env.SMTP_SECURE === 'true';
+            } else if (smtpUser && smtpUser.toLowerCase().includes('@gmail.com')) {
+                transportOptions.service = 'gmail';
+            } else {
+                // Privzeti SMTP strežnik
+                transportOptions.host = 'in-v3.mailjet.com';
+                transportOptions.port = 587;
+                transportOptions.secure = false;
+            }
+
+            const transporter = nodemailer.createTransport(transportOptions);
 
             await transporter.sendMail({
                 from: process.env.SMTP_FROM || `"Skavtsko skladišče" <${smtpUser}>`,

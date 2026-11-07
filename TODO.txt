@@ -1,0 +1,28 @@
+Spreminjanje gesla mora posalti na email neko preverjanje (kodo), ki jo moraš vpisati, da vemo da je oseba zares z dostopom do tega emaila. In možnost menjave gesla.
+
+git commit -m "added email auth"
+
+1. Podatkovna baza in integracija z Google Drive (MCP)
+Povezava preko MCP (Model Context Protocol):Vzpostavitev MCP povezave z Excel datotekami na Google Drive, da se izognemo uporabi podatkovne baze (npr. MongoDB) – vse ostane na Drive-u.   
+Implementacija uvoza podatkov: vlečenje informacij direktno iz Drive-a, uvoz v obstoječem stanju, nato pa v aplikaciji dodajanje manjkajočih podatkov.   
+Upravljanje podatkov o artiklih:Najprej se ustvarijo police (lokacije), nato se jih z multi-select funkcijo dodeljuje posameznim artiklom.   Opcionalni podatki pri uvozu (veja, količina, lokacija), saj se jih lahko doda naknadno v splošni strani.   
+Varnost in vzdrževanje:Implementacija gumba za brisanje vseh artiklov iz skladišča, ki pa obvezno najprej avtomatsko naloži varnostno kopijo (backup) podatkov.   
+
+2. Upravljanje računov in slike
+Povezava z računi in slikami:Vzpostavitev specifične mape na Drive-u za račune posameznih vej (Moji računi).   
+Omogočiti prenos slik računov in vnos podatkov v tabelo računov.   Varnostna omejitev pisanja: Aplikacija naj ureja/vnaša samo specifične podatke, ki jih želiš (vnaša v tabelo, ne briše in ne spreminja obstoječih polj, če je to mogoče).   
+Uporabniški vmesnik (UI) za račune:Seznam računov z informacijami: možnost izbire računa, dodajanja manjkajočih info in samodejno urejanje v Excelu.   
+Indikator opozorila: Prikaz rdečega klicaja, če račun nima vseh zahtevanih informacij.   
+Poseben razdelek: Komu je treba vrnit denar.   
+Nastavljive poti: Gumb za ogled in spreminjanje konfiguracije / poti do map z računi na Google Drive.   
+
+3. WhatsApp & AI Integracija (Workflow za prepoznavanje računov) - najprej na spl strani možnost urejanja računov, potem pa ai bot.
+WhatsApp / Messenger Bot:Posodobitev aplikacije (App update) z AI MCP, da lahko botu preko telefona/messengerja poveš, kaj si kupil, katera veja (persistent memory v kateri veji si), kateri tabor/dogodek ... da se to označi na strani.   
+Workflow za slikanje računa: bot sliko uploada v mapo slik računov ter avtomatsko izvleče in vnese podatke v tabelo.   
+Tehnične optimizacije za AI:Vzpostavitev seznama brezplačnih API ključev za AI.   
+Implementacija samodejnega preklapljanja med API ključi (na drug račun s svežimi tokeni), ko je trenutni ključ blizu porabe.   Uporaba brezplačnih AI agentov za razmišljanje, prenos podatkov v splošno stran in pretvorbo v JSON format.   
+Prestreganje JSON struktur iz tabele za uvoz podatkov (ne glede na vrstni red).   
+
+4. Uporabniki, dostopi in UI nastavitve
+Sistem uporabnikov in vej:Možnost več uporabnikov, kjer ima vsak dostop do podatkov svoje veje, ali implementacija filtriranja podatkov glede na izbrano vejo.   
+Prilagoditev vmesnika:Dodana možnost spreminjanja teme uporabniškega vmesnika (UI theme switcher).  
