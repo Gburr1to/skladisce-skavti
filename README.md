@@ -72,7 +72,6 @@ Strežnik skrbi za shranjevanje podatkov, komunikacijo z bazo in prijave.
    - `SMTP_PASS` = *(16-mestno App Password / geslo aplikacije iz vašega Google računa)*
 
 > 💡 *Kako pridobiti `SMTP_PASS`: V vašem Google računu vklopite 2-stopenjsko preverjanje in na povezavi [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords) ustvarite novo geslo aplikacije (npr. z imenom "Skladisce").*
-> *(Opomba: Koda za Gmail samodejno nastavi `smtp.gmail.com` in vrata `587`, tako da ostalih polj iz `.env.example` ni treba ročno vpisovati).*
 5. Kliknite **Manual Deploy - deploy latest commit**. Počakajte nekaj minut, da se izpiše status *Live*, nato na vrhu strani kopirajte povezavo do svojega strežnika (npr. `https://skladisce-backend.onrender.com`).
 
 > How to deploy on render https://www.youtube.com/watch?v=A2VoUyZZMCw
