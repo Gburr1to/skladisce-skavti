@@ -65,7 +65,6 @@ export default function KeyHoldersPage() {
   // Modal: Ponastavitev gesla z verifikacijsko kodo na Gmail
   const [resetModalOpen, setResetModalOpen] = useState(false);
   const [resetStep, setResetStep] = useState(1); // 1 = pošlji kodo, 2 = vnesi kodo & novo geslo
-  const [resetEmailInput, setResetEmailInput] = useState('');
   const [resetCode, setResetCode] = useState('');
   const [resetNewPassword, setResetNewPassword] = useState('');
   const [resetConfirmPassword, setResetConfirmPassword] = useState('');
@@ -230,13 +229,11 @@ export default function KeyHoldersPage() {
 
   // Pošiljanje verifikacijske kode na Gmail
   const handleSendResetCode = async (e) => {
-    if (e) e.preventDefault();
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
 
     try {
       setResetSendingCode(true);
-      const res = await api.requestKeyHolderResetCode({
-        recoveryEmail: resetEmailInput.trim() || undefined
-      });
+      const res = await api.requestKeyHolderResetCode();
 
       setResetStep(2);
       if (res.devCode) {
@@ -377,9 +374,6 @@ export default function KeyHoldersPage() {
             <Key className="w-6 h-6 text-emerald-700" />
             <span>Imetniki ključa skladišča</span>
           </h1>
-          <p className="text-xs text-slate-500">
-            Evidenca skavtskih voditeljev s fizičnim ključem do prostorov
-          </p>
         </div>
 
         {/* Status varnosti in orodja */}
@@ -447,7 +441,6 @@ export default function KeyHoldersPage() {
               <button
                 onClick={() => {
                   setResetStep(1);
-                  setResetEmailInput('');
                   setResetCode('');
                   setResetNewPassword('');
                   setResetConfirmPassword('');
@@ -763,7 +756,6 @@ export default function KeyHoldersPage() {
                   onClick={() => {
                     setUnlockModalOpen(false);
                     setResetStep(1);
-                    setResetEmailInput('');
                     setResetCode('');
                     setResetNewPassword('');
                     setResetConfirmPassword('');
@@ -906,45 +898,31 @@ export default function KeyHoldersPage() {
               <div className="space-y-4">
                 <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-700 leading-relaxed">
                   Za potrditev, da ste pooblaščeni za spreminjanje gesla, bomo na naslov{' '}
-                  <strong className="text-slate-900">{securityConfig.recoveryEmailMasked}</strong> poslali enkratno 6-mestno varnostno kodo.
+                  <strong className="text-slate-900">{securityConfig.recoveryEmailMasked || 'registrirani Gmail'}</strong> poslali enkratno 6-mestno varnostno kodo.
                 </div>
 
-                <form onSubmit={handleSendResetCode} className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                      Potrdite vaš Gmail naslov (opcijsko za dodatno varnost)
-                    </label>
-                    <input
-                      type="email"
-                      placeholder="npr. vodja@gmail.com..."
-                      value={resetEmailInput}
-                      onChange={(e) => setResetEmailInput(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                    />
-                  </div>
-
-                  <div className="pt-2 flex items-center justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setResetModalOpen(false)}
-                      className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl"
-                    >
-                      Prekliči
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={resetSendingCode}
-                      className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 disabled:opacity-60"
-                    >
-                      {resetSendingCode ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Send className="w-4 h-4" />
-                      )}
-                      <span>Pošlji kodo na email</span>
-                    </button>
-                  </div>
-                </form>
+                <div className="pt-2 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setResetModalOpen(false)}
+                    className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl"
+                  >
+                    Prekliči
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSendResetCode}
+                    disabled={resetSendingCode}
+                    className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 disabled:opacity-60"
+                  >
+                    {resetSendingCode ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
+                    <span>Pošlji kodo na email</span>
+                  </button>
+                </div>
               </div>
             ) : (
               /* KORAK 2: Vnos kode in nastavitev novega gesla */

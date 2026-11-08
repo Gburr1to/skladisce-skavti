@@ -1,29 +1,24 @@
 # Skavtsko Skladišče / Scout Warehouse App
 
-Sodobna spletna aplikacija za enostavno, pregledno in učinkovito vodenje skavtskega skladišča opreme, evidenco izposoj, nabave ter upravljanje skrbnikov ključev.
-
----
-
-
-## Opis projekta
-**Skavtsko Skladišče** je MERN aplikacija (MongoDB, Express, React, Node.js), prilagojena potrebam skavtskih stegov in voditeljev. Omogoča hiter pregled nad vsemi artikli, natančno lokacijo opreme (soba -> omara -> polica), beleženje izposoj članom ter vodenje nakupovalnega seznama za manjkajočo ali poškodovano opremo.
-
 ### Glavne funkcionalnosti
-- 📦 **Upravljanje artiklov in zalog**: Pregled, iskanje in filtriranje opreme po kategorijah in lokacijah, generiranje QR kod ter enostaven uvoz podatkov preko Excel / CSV preglednic.
-- 🗄️ **Hierarhična struktura skladišča**: Organizacija prostora po nivojih: *Skladišča / Sobe ➔ Omare ➔ Police ➔ Artikli*.
-- 🔄 **Sistem izposoj in vračil**: Hitra izposoja opreme voditeljem ali vejam, pregled aktivnih izposoj ter možnost avtomatskega dodajanja poškodovanih/obrabljenih artiklov na nakupovalni seznam ob vračilu.
-- 🛒 **Nakupovalni seznam**: Spremljanje potrebnih nakupov potrošnega materiala ali novih kosov opreme s statusi nabave.
-- 🔑 **Skrbniki ključev**: Evidenca oseb, ki imajo ključe skladišča, skupaj s kontaktnimi podatki za hiter dogovor o prevzemu.
-- 🔒 **Varnost in avtentikacija**: Zaščiten dostop z JWT žetoni ter ponastavitev gesla s potrditveno kodo preko e-pošte.
+- 📦 **Upravljanje artiklov in zalog**: Iskanje, filtriranje, masovno urejanje, uvoz/izvoz podatkov preko Excel preglednic.
+- 🔄 **Sistem izposoj in vračil**
+- 🛒 **Nakupovalni seznam**
+- 🔑 **Skrbniki ključev za skladišča**
+- 🔒 **Varnost in avtentikacija**: Evidenco ključev ureja samo gospodar, email preverjanje
 
 ---
 
-### Slike aplikacije (Screenshots)
+### Slike aplikacije
 
-#### Pregled artiklov (Artikli)
+#### Pregled artiklov
 ![Pregled artiklov](images/articles.png)
 
-#### Hierarhija skladišča (Sobe, omare in police)
+#### Masovno urejanje
+![Masovno urejanje](images/mass-edit.png)
+
+
+#### Podpora več skladišč
 ![Skladišča in police](images/warehouses.png)
 
 #### Izposoja opreme
@@ -32,132 +27,71 @@ Sodobna spletna aplikacija za enostavno, pregledno in učinkovito vodenje skavts
 #### Nakupovalni seznam
 ![Nakupovalni seznam](images/shopping.png)
 
-#### Skrbniki ključev
+#### Imetniki ključev
 ![Skrbniki ključev](images/keys.png)
 
+---
+
+### Zaženi svojo aplikacijo na spletu brezplačno
+
+Aplikacijo lahko brezplačno postavi vsak skavtski steg v približno 10–15 minutah brez programiranja. Potrebujete le 4 preproste korake:
 
 ---
 
-### Uporabljene tehnologije
-- **Frontend**: React 19, Vite, Tailwind CSS v4, React Router 7, Lucide Icons, SheetJS (`xlsx`)
-- **Backend**: Node.js, Express, MongoDB Atlas, Mongoose, JWT (`jsonwebtoken`), Nodemailer, QRCode, Swagger UI
+#### 1. Kopiraj projekt na svoj račun (GitHub Fork)
+1. Če še nimate, ustvarite stegov račun na [GitHub.com](https://github.com/).
+2. Na vrhu te strani kliknite gumb **`Fork`** (zgoraj desno) ter nato **`Create fork`**. S tem dobite svojo osebno kopijo aplikacije. 
+> How to fork: https://www.youtube.com/watch?v=LXewkvtfUGM
 
 ---
 
-### Namestitev in lokalni zagon
+#### 2. Ustvari brezplačno bazo podatkov (MongoDB Atlas)
+Tukaj se bodo varno hranili vsi vaši artikli, skladišča in izposoje.
 
-#### 1. Predpogoji
-- Node.js (v18+)
-- npm
-- MongoDB Atlas račun ali lokalna MongoDB baza
+1. Ustvarite stegov račun na [MongoDB Atlas](https://www.mongodb.com/cloud/atlas/register).
+2. Ustvarite novo bazo s paketom **M0 Free**. Poljubno ime in nastavitve. 
+3. **Uporabnik baze:** Določite poljubno uporabniško ime in geslo ter si ju shranite.
+4. **Dostop do baze:** V levem meniju kliknite **Network Access** ➔ **Add IP Address** ➔ izberite **Allow Access from Anywhere** (`0.0.0.0/0`) ➔ potrdite.
+5. **Povezovalni niz (Connection string):** Kliknite **Database** ➔ gumb **Connect** ➔ izberite **Drivers** ter kopirajte povezovalni niz na dnu (`mongodb+srv://username:<password>...`). Besedo `<password>` v nizu nadomestite s svojim geslom. **To boste potrebovali v naslednjem koraku.** Obdržite privzete nastavitve (Node.js). Ne zaganjajte install drver.
 
-#### 2. Backend
-```bash
-cd backend
-npm install
-```
-Ustvarite datoteko `.env` v mapi `backend/`:
-```env
-PORT=3000
-MONGO_URI=tvoja_mongodb_povezava
-ACCESS_TOKEN_SECRET=tvoj_skrivni_jwt_kljuc (izmisli si ga)
-```
-Zagon backend strežnika:
-```bash
-npm run dev
-```
-*API dokumentacija (Swagger) je na voljo na `http://localhost:3000/api-docs`.*
-
-#### 3. Frontend
-```bash
-cd frontend
-npm install
-```
-Ustvarite datoteko `.env` v mapi `frontend/`:
-```env
-VITE_API_URL=http://localhost:3000
-```
-Zagon razvojnega strežnika:
-```bash
-npm run dev
-```
+> How to create MongoDB Atlas Database: https://www.youtube.com/watch?v=7a2Nns23d_s
 
 ---
 
-## Project Overview
-**Scout Warehouse App** is a MERN-stack web application designed for scout troops to streamline warehouse inventory management, track equipment loans, manage replenishment shopping lists, and keep a directory of key holders.
+#### 3. Zaženi backend (Render)
+Strežnik skrbi za shranjevanje podatkov, komunikacijo z bazo in prijave.
+1. Ustvarite račun na [Render.com](https://render.com/) in se prijavite s stegovim GitHub računom.
+2. Kliknite **New +** ➔ **Web Service** in izberite svoj forkani repozitorij.
+3. Vnesite naslednje nastavitve:
+   - **Root Directory:** `backend`
+   - **Build Command:** `npm install`
+   - **Start Command:** `npm start`
+   - **Instance Type:** `Free`
+4. Spodaj kliknite na **Environment Variables** (Okoljske spremenljivke) in dodajte:
+   - `MONGO_URI` = *(vaš povezovalni niz (connection string) iz 2. koraka)*
+   - `ACCESS_TOKEN_SECRET` = *(poljubno dolgo varno geslo ali naključno besedilo)*
+   - `GMAIL_USER` = *(stegovski Gmail naslov za pošiljanje varnostnih kod za menjavo gesla)*
+   - `GMAIL_PASS` = *(16-mestno App Password / geslo aplikacije iz vašega Google računa)*
 
-### Key Features
-- 📦 **Inventory & Item Management**: Fast search, filtering by category and location, QR code generation, and bulk data import via Excel/CSV spreadsheets.
-- 🗄️ **Warehouse Hierarchy**: Logical spatial breakdown: *Rooms / Warehouses ➔ Closets ➔ Shelves ➔ Articles*.
-- 🔄 **Equipment Borrowing & Returns**: Simple check-out flow for troop leaders, tracking of active loans, and prompt to add damaged/depleted items directly to the shopping list upon return.
-- 🛒 **Shopping List**: Centralized tracking of supplies, replacements, and newly needed gear.
-- 🔑 **Key Custodians**: Contact directory of individuals who hold warehouse keys for easy access coordination.
-- 🔒 **Security & Authentication**: Protected routes with JWT authentication and secure email verification codes for password recovery.
+> 💡 *Kako pridobiti `GMAIL_PASS`: V vašem Google računu vklopite 2-stopenjsko preverjanje in na povezavi [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords) ustvarite novo geslo aplikacije (npr. z imenom "Skladisce").*
+5. Kliknite **Manual Deploy - deploy latest commit**. Počakajte nekaj minut, da se izpiše status *Live*, nato na vrhu strani kopirajte povezavo do svojega strežnika (npr. `https://skladisce-backend.onrender.com`).
 
----
-
-### Application Screenshots
-
-#### Inventory Overview
-![Articles Overview](images/articles.png)
-
-#### Storage Rooms, Closets & Shelves
-![Storage Hierarchy](images/warehouses.png)
-
-#### Borrowing Equipment
-![Borrow Equipment](images/borrow.png)
-
-#### Shopping List
-![Shopping List](images/shopping.png)
-
-#### Key Holders
-![Key Holders](images/keys.png)
-
-
+> How to deploy on render https://www.youtube.com/watch?v=A2VoUyZZMCw
 
 ---
 
-### Tech Stack
-- **Frontend**: React 19, Vite, Tailwind CSS v4, React Router 7, Lucide Icons, SheetJS (`xlsx`)
-- **Backend**: Node.js, Express, MongoDB Atlas, Mongoose, JWT (`jsonwebtoken`), Nodemailer, QRCode, Swagger UI
+#### 4. Objavi spletno aplikacijo (Cloudflare Pages)
+To je spletna stran, ki jo boste uporabniki odprli na računalniku ali pametnem telefonu.
+1. Ustvarite stegov račun na [Cloudflare.com](https://dash.cloudflare.com/).
+2. V levem meniju izberite **Workers & Pages** ➔ **Create application** ➔ zavihek **Pages** ➔ **Connect to Git**.
+3. Izberite svoj GitHub račun in ta forkani repozitorij.
+4. Nastavitve gradnje (Build settings):
+   - **Framework preset:** `Vite`
+   - **Root directory:** `frontend`
+   - **Build command:** `npm run build`
+   - **Build output directory:** `dist`
+5. V razdelku **Environment variables** dodajte spremenljivko:
+   - `VITE_API_URL` = *(naslov vašega Render strežnika iz 3. koraka, npr. `https://skladisce-backend.onrender.com`)*
+6. Kliknite **Save and Deploy**. Po zaključku je vaša aplikacija takoj na voljo na naslovu `https://nekaj.pages.dev`!
 
----
-
-### Installation & Setup
-
-#### 1. Prerequisites
-- Node.js (v18+)
-- npm
-- MongoDB Atlas database or a local MongoDB instance
-
-#### 2. Backend Setup
-```bash
-cd backend
-npm install
-```
-Create a `.env` file in the `backend/` folder:
-```env
-PORT=3000
-MONGO_URI=your_mongodb_connection_string
-ACCESS_TOKEN_SECRET=your_jwt_secret (make it up)
-```
-Run the backend server:
-```bash
-npm run dev
-```
-*Interactive API documentation (Swagger UI) is available at `http://localhost:3000/api-docs`.*
-
-#### 3. Frontend Setup
-```bash
-cd frontend
-npm install
-```
-Create a `.env` file in the `frontend/` folder:
-```env
-VITE_API_URL=http://localhost:3000
-```
-Run the frontend development server:
-```bash
-npm run dev
-```
+> How to deploy on cloudflare: https://www.youtube.com/watch?v=KlNPhoQQjmw

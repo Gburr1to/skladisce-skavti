@@ -28,7 +28,9 @@ import {
   Square,
   ShieldAlert,
   Warehouse,
-  Archive
+  Archive,
+  Filter,
+  ChevronDown
 } from 'lucide-react';
 
 export default function AllArticlesPage() {
@@ -47,6 +49,8 @@ export default function AllArticlesPage() {
   const [selectedWarehouse, setSelectedWarehouse] = useState('all');
   const [selectedCloset, setSelectedCloset] = useState('all');
   const [onlyInStock, setOnlyInStock] = useState(false);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [expandedArticleIds, setExpandedArticleIds] = useState({});
 
   // Modal za dodajanje artikla
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -468,30 +472,59 @@ Podatki za preureditev:
 
   const hasActiveFilters = filterQuery !== '' || selectedCategory !== 'Vse' || selectedBranch !== 'Vse veje' || selectedWarehouse !== 'all' || selectedCloset !== 'all' || onlyInStock;
 
+  const activeFilterCount = (selectedCategory !== 'Vse' ? 1 : 0) +
+    (selectedBranch !== 'Vse veje' ? 1 : 0) +
+    (selectedWarehouse !== 'all' ? 1 : 0) +
+    (selectedCloset !== 'all' ? 1 : 0) +
+    (onlyInStock ? 1 : 0);
+
   const resetFilters = () => {
-    setFilterQuery('');
-    setSelectedCategory('Vse');
-    setSelectedBranch('Vse veje');
-    setSelectedWarehouse('all');
-    setSelectedCloset('all');
-    setOnlyInStock(false);
+    try {
+      setFilterQuery('');
+      setSelectedCategory('Vse');
+      setSelectedBranch('Vse veje');
+      setSelectedWarehouse('all');
+      setSelectedCloset('all');
+      setOnlyInStock(false);
+    } catch (err) {
+      console.error('Error resetting filters:', err);
+    }
   };
 
-  // Multi-select logika
+  const toggleArticleExpand = (articleId) => {
+    try {
+      setExpandedArticleIds(prev => ({
+        ...prev,
+        [articleId]: !prev[articleId]
+      }));
+    } catch (err) {
+      console.error('Error toggling article expansion:', err);
+    }
+  };
+
+  // Multi-select logic
   const allFilteredSelected = filteredArticles.length > 0 && filteredArticles.every(a => selectedArticleIds.includes(a._id));
 
   const toggleSelectAll = () => {
-    if (allFilteredSelected) {
-      setSelectedArticleIds([]);
-    } else {
-      setSelectedArticleIds(filteredArticles.map(a => a._id));
+    try {
+      if (allFilteredSelected) {
+        setSelectedArticleIds([]);
+      } else {
+        setSelectedArticleIds(filteredArticles.map(a => a._id));
+      }
+    } catch (err) {
+      console.error('Error toggling select all articles:', err);
     }
   };
 
   const toggleSelectArticle = (id) => {
-    setSelectedArticleIds(prev => 
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
+    try {
+      setSelectedArticleIds(prev => 
+        prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+      );
+    } catch (err) {
+      console.error('Error toggling article selection:', err);
+    }
   };
 
   // Masovno posodabljanje artiklov (Enoten Bulk Edit)
@@ -693,126 +726,152 @@ Podatki za preureditev:
       </div>
 
       {/* Iskalnik in filtri */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-3">
-        {/* Iskalno polje */}
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Išči po nazivu, opisu, kategoriji ali veji..."
-            value={filterQuery}
-            onChange={(e) => setFilterQuery(e.target.value)}
-            className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
-          />
-        </div>
-
-        {/* Vrstica s filtri */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-          {/* Filter kategorija */}
-          <div>
-            <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1 flex items-center gap-1">
-              <Tag className="w-3 h-3 text-slate-400" />
-              <span>Kategorija</span>
-            </label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
-            >
-              <option value="Vse">Vse kategorije</option>
-              {ARTICLE_CATEGORIES.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Filter veja */}
-          <div>
-            <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1 flex items-center gap-1">
-              <Users className="w-3 h-3 text-slate-400" />
-              <span>Skavtska veja</span>
-            </label>
-            <select
-              value={selectedBranch}
-              onChange={(e) => setSelectedBranch(e.target.value)}
-              className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
-            >
-              {SKAVT_BRANCHES.map(branch => (
-                <option key={branch.id} value={branch.id}>{branch.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Filter skladišče */}
-          <div>
-            <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1 flex items-center gap-1">
-              <Warehouse className="w-3 h-3 text-slate-400" />
-              <span>Skladišče</span>
-            </label>
-            <select
-              value={selectedWarehouse}
-              onChange={(e) => {
-                setSelectedWarehouse(e.target.value);
-                setSelectedCloset('all');
-              }}
-              className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
-            >
-              <option value="all">Vsa skladišča</option>
-              {warehouses.map(w => (
-                <option key={w._id} value={w._id}>{w.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Filter omara */}
-          <div>
-            <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1 flex items-center gap-1">
-              <Archive className="w-3 h-3 text-slate-400" />
-              <span>Omara</span>
-            </label>
-            <select
-              value={selectedCloset}
-              onChange={(e) => setSelectedCloset(e.target.value)}
-              className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
-            >
-              <option value="all">
-                {selectedWarehouse !== 'all' ? 'Vse omare v tem skladišču' : 'Vse omare'}
-              </option>
-              {closets
-                .filter(c => selectedWarehouse === 'all' || (c.warehouse?._id || c.warehouse) === selectedWarehouse)
-                .map(c => (
-                  <option key={c._id} value={c._id}>
-                    {c.name} {selectedWarehouse === 'all' && c.warehouse?.name ? `(${c.warehouse.name})` : ''}
-                  </option>
-                ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Spodnja vrstica filtrov */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100 text-xs">
-          <label className="flex items-center gap-2 cursor-pointer text-slate-700 font-medium">
+      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-3">
+        {/* Iskalno polje z mobilnim gumbom za filtre */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
-              type="checkbox"
-              checked={onlyInStock}
-              onChange={(e) => setOnlyInStock(e.target.checked)}
-              className="w-4 h-4 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500"
+              type="text"
+              placeholder="Išči po nazivu, opisu, kategoriji ali veji..."
+              value={filterQuery}
+              onChange={(e) => setFilterQuery(e.target.value)}
+              className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600 transition-colors"
             />
-            <span>Samo razpoložljivi artikli (na zalogi)</span>
-          </label>
+          </div>
 
-          <div className="flex items-center gap-2">
-            {hasActiveFilters && (
-              <button
-                onClick={resetFilters}
-                className="text-[11px] text-slate-500 hover:text-slate-800 underline font-medium"
-              >
-                Počisti filtre
-              </button>
+          {/* Gumb za razširitev/skrčenje filtrov na mobilnih napravah */}
+          <button
+            type="button"
+            onClick={() => setShowMobileFilters(prev => !prev)}
+            className={`sm:hidden px-3 py-2 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all shrink-0 select-none ${
+              showMobileFilters || activeFilterCount > 0
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs'
+                : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-300'
+            }`}
+            aria-label="Prikaži filtre"
+          >
+            <Filter className="w-3.5 h-3.5 text-emerald-700" />
+            <span>Filtri</span>
+            {activeFilterCount > 0 && (
+              <span className="w-4.5 h-4.5 rounded-full bg-emerald-700 text-white text-[10px] flex items-center justify-center font-bold">
+                {activeFilterCount}
+              </span>
             )}
-            <span className="text-[11px] font-bold px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md">
-              Zadetki: {filteredArticles.length}
-            </span>
+            <ChevronDown className={`w-3.5 h-3.5 text-slate-500 transition-transform duration-200 ${showMobileFilters ? 'rotate-180' : ''}`} />
+          </button>
+        </div>
+
+        {/* Filtri - na mobilnem privzeto skrčeni, na sm+ vedno vidni */}
+        <div className={`${showMobileFilters ? 'block' : 'hidden'} sm:block space-y-3 pt-1 border-t sm:border-t-0 border-slate-100`}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            {/* Filter kategorija */}
+            <div>
+              <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1 flex items-center gap-1">
+                <Tag className="w-3 h-3 text-slate-400" />
+                <span>Kategorija</span>
+              </label>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+              >
+                <option value="Vse">Vse kategorije</option>
+                {ARTICLE_CATEGORIES.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filter veja */}
+            <div>
+              <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1 flex items-center gap-1">
+                <Users className="w-3 h-3 text-slate-400" />
+                <span>Skavtska veja</span>
+              </label>
+              <select
+                value={selectedBranch}
+                onChange={(e) => setSelectedBranch(e.target.value)}
+                className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+              >
+                {SKAVT_BRANCHES.map(branch => (
+                  <option key={branch.id} value={branch.id}>{branch.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filter skladišče */}
+            <div>
+              <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1 flex items-center gap-1">
+                <Warehouse className="w-3 h-3 text-slate-400" />
+                <span>Skladišče</span>
+              </label>
+              <select
+                value={selectedWarehouse}
+                onChange={(e) => {
+                  setSelectedWarehouse(e.target.value);
+                  setSelectedCloset('all');
+                }}
+                className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+              >
+                <option value="all">Vsa skladišča</option>
+                {warehouses.map(w => (
+                  <option key={w._id} value={w._id}>{w.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filter omara */}
+            <div>
+              <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1 flex items-center gap-1">
+                <Archive className="w-3 h-3 text-slate-400" />
+                <span>Omara</span>
+              </label>
+              <select
+                value={selectedCloset}
+                onChange={(e) => setSelectedCloset(e.target.value)}
+                className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+              >
+                <option value="all">
+                  {selectedWarehouse !== 'all' ? 'Vse omare v tem skladišču' : 'Vse omare'}
+                </option>
+                {closets
+                  .filter(c => selectedWarehouse === 'all' || (c.warehouse?._id || c.warehouse) === selectedWarehouse)
+                  .map(c => (
+                    <option key={c._id} value={c._id}>
+                      {c.name} {selectedWarehouse === 'all' && c.warehouse?.name ? `(${c.warehouse.name})` : ''}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Spodnja vrstica filtrov */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100 text-xs">
+            <label className="flex items-center gap-2 cursor-pointer text-slate-700 font-medium">
+              <input
+                type="checkbox"
+                checked={onlyInStock}
+                onChange={(e) => setOnlyInStock(e.target.checked)}
+                className="w-4 h-4 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500"
+              />
+              <span>Samo razpoložljivi artikli (na zalogi)</span>
+            </label>
+
+            <div className="flex items-center gap-2">
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="text-[11px] text-slate-500 hover:text-slate-800 underline font-medium"
+                >
+                  Počisti filtre
+                </button>
+              )}
+              <span className="text-[11px] font-bold px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md">
+                Zadetki: {filteredArticles.length}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -850,24 +909,14 @@ Podatki za preureditev:
               </span>
             </label>
 
-            {selectedArticleIds.length > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-lg text-[11px]">
-                  Izbranih: {selectedArticleIds.length}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setSelectedArticleIds([])}
-                  className="text-slate-500 hover:text-slate-800 underline text-[11px] font-medium"
-                >
-                  Počisti izbor
-                </button>
-              </div>
-            )}
+            <span className="text-[11px] font-medium text-slate-500">
+              Skupaj: {filteredArticles.length}
+            </span>
           </div>
 
           {filteredArticles.map(article => {
             const isSelected = selectedArticleIds.includes(article._id);
+            const isExpanded = !!expandedArticleIds[article._id];
             const shelfId = article.shelf?._id || article.shelf;
             const warehouseName = article.shelf?.closet?.warehouse?.name;
             const closetName = article.shelf?.closet?.name || 'Omara';
@@ -879,34 +928,56 @@ Podatki za preureditev:
             return (
               <div
                 key={article._id}
-                className={`bg-white rounded-2xl border p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
+                className={`bg-white rounded-2xl border shadow-2xs transition-all ${
                   isSelected 
                     ? 'border-emerald-500 bg-emerald-50/25 ring-1 ring-emerald-500' 
                     : 'border-slate-200/90 hover:border-slate-300'
                 }`}
               >
-                <div className="flex items-start gap-3 min-w-0">
-                  {/* Checkbox za multi-select */}
-                  <div className="flex items-center h-10 shrink-0">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleSelectArticle(article._id)}
-                      className="w-4 h-4 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                {/* Kompakten mobilni pogled (klik razširi podrobnosti) */}
+                <div
+                  onClick={() => toggleArticleExpand(article._id)}
+                  className="sm:hidden px-3.5 py-2.5 flex items-center justify-between gap-2.5 cursor-pointer select-none"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center shrink-0"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelectArticle(article._id)}
+                        className="w-4 h-4 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                      />
+                    </div>
+                    <span className="font-bold text-slate-900 text-sm truncate">
+                      {article.name}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0 text-slate-400">
+                    <span
+                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                        inStock
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-rose-100 text-rose-700'
+                      }`}
+                    >
+                      {qty}
+                    </span>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        isExpanded ? 'rotate-180 text-emerald-700' : ''
+                      }`}
                     />
                   </div>
+                </div>
 
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-100 flex items-center justify-center shrink-0 mt-0.5">
-                    <Package className="w-5 h-5 text-emerald-700" />
-                  </div>
-
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="font-bold text-slate-900 text-sm leading-tight">
-                        {article.name}
-                      </span>
-
-                      {/* Zaloga */}
+                {/* Razširjene podrobnosti na mobilnem telefonu */}
+                {isExpanded && (
+                  <div className="sm:hidden px-3.5 pb-3 pt-1 border-t border-slate-100 space-y-2.5 animate-in fade-in duration-150">
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
                       <span
                         className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
                           inStock
@@ -914,17 +985,15 @@ Podatki za preureditev:
                             : 'bg-rose-100 text-rose-700'
                         }`}
                       >
-                        {inStock ? `${qty} kos` : 'Ni zaloge'}
+                        {inStock ? `${qty} kos na zalogi` : 'Ni zaloge'}
                       </span>
 
-                      {/* Kategorija */}
                       {article.category && (
                         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 shrink-0">
                           {article.category}
                         </span>
                       )}
 
-                      {/* Veja */}
                       {article.branch && article.branch !== 'Vse veje' && (
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${branchStyle}`}>
                           {article.branch}
@@ -933,16 +1002,15 @@ Podatki za preureditev:
                     </div>
 
                     {article.description && (
-                      <p className="text-xs text-slate-500 line-clamp-1">
+                      <p className="text-xs text-slate-600">
                         {article.description}
                       </p>
                     )}
 
-                    {/* Lokacija */}
                     <div className="flex items-center gap-1 text-[11px] text-slate-500">
-                      <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                      <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                       {article.shelf ? (
-                        <>
+                        <div className="flex items-center gap-1 flex-wrap">
                           {warehouseName && (
                             <>
                               <span className="font-semibold text-slate-800">{warehouseName}</span>
@@ -952,32 +1020,130 @@ Podatki za preureditev:
                           <span className="font-medium text-slate-700">{closetName}</span>
                           <span className="text-slate-400">&rarr;</span>
                           <Link 
-                            to={`/polica/${shelfId}`} 
+                            to={`/polica/${shelfId}`}
+                            onClick={(e) => e.stopPropagation()}
                             className="text-emerald-700 hover:underline font-semibold"
                           >
                             {shelfName}
                           </Link>
-                        </>
+                        </div>
                       ) : (
                         <span className="italic text-slate-400">Ni določene police</span>
                       )}
                     </div>
-                  </div>
-                </div>
 
-                <div className="flex items-center justify-end shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-                  <button
-                    onClick={() => handleOpenBorrow(article)}
-                    disabled={!inStock}
-                    className={`w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-                      inStock
-                        ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs active:scale-95'
-                        : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
-                    }`}
-                  >
-                    <HandHelping className="w-3.5 h-3.5" />
-                    <span>{inStock ? 'Izposodi si' : 'Brez zaloge'}</span>
-                  </button>
+                    <div className="pt-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenBorrow(article);
+                        }}
+                        disabled={!inStock}
+                        className={`w-full py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                          inStock
+                            ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs active:scale-95'
+                            : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                        }`}
+                      >
+                        <HandHelping className="w-3.5 h-3.5" />
+                        <span>{inStock ? 'Izposodi si' : 'Brez zaloge'}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Prikaz za večje zaslone (namizje / sm+) */}
+                <div className="hidden sm:flex sm:items-center sm:justify-between p-4 gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="flex items-center h-10 shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelectArticle(article._id)}
+                        className="w-4 h-4 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                      />
+                    </div>
+
+                    <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-100 flex items-center justify-center shrink-0 mt-0.5">
+                      <Package className="w-5 h-5 text-emerald-700" />
+                    </div>
+
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="font-bold text-slate-900 text-sm leading-tight">
+                          {article.name}
+                        </span>
+
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                            inStock
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-rose-100 text-rose-700'
+                          }`}
+                        >
+                          {inStock ? `${qty} kos` : 'Ni zaloge'}
+                        </span>
+
+                        {article.category && (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 shrink-0">
+                            {article.category}
+                          </span>
+                        )}
+
+                        {article.branch && article.branch !== 'Vse veje' && (
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${branchStyle}`}>
+                            {article.branch}
+                          </span>
+                        )}
+                      </div>
+
+                      {article.description && (
+                        <p className="text-xs text-slate-500 line-clamp-1">
+                          {article.description}
+                        </p>
+                      )}
+
+                      <div className="flex items-center gap-1 text-[11px] text-slate-500">
+                        <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                        {article.shelf ? (
+                          <>
+                            {warehouseName && (
+                              <>
+                                <span className="font-semibold text-slate-800">{warehouseName}</span>
+                                <span className="text-slate-400">&rarr;</span>
+                              </>
+                            )}
+                            <span className="font-medium text-slate-700">{closetName}</span>
+                            <span className="text-slate-400">&rarr;</span>
+                            <Link 
+                              to={`/polica/${shelfId}`} 
+                              className="text-emerald-700 hover:underline font-semibold"
+                            >
+                              {shelfName}
+                            </Link>
+                          </>
+                        ) : (
+                          <span className="italic text-slate-400">Ni določene police</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end shrink-0">
+                    <button
+                      onClick={() => handleOpenBorrow(article)}
+                      disabled={!inStock}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                        inStock
+                          ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs active:scale-95'
+                          : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                      }`}
+                    >
+                      <HandHelping className="w-3.5 h-3.5" />
+                      <span>{inStock ? 'Izposodi si' : 'Brez zaloge'}</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -1535,22 +1701,13 @@ Podatki za preureditev:
         </div>
       )}
 
-      {/* Plavajoča orodna vrstica za masovna dejanja */}
+      {/* Plavajoči gumb za masovno urejanje izbranih artiklov - centriran na sredini ekrana */}
       {selectedArticleIds.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 max-w-lg w-[92%] bg-slate-900/95 backdrop-blur-md text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center justify-between gap-3 border border-slate-800 animate-in slide-in-from-bottom-5 duration-200">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
-              {selectedArticleIds.length}
-            </span>
-            <span className="text-xs font-semibold text-slate-200 truncate">
-              izbranih artiklov
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => {
+        <div className="fixed bottom-18 md:bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1.5 p-1.5 bg-slate-900/90 backdrop-blur-md rounded-full shadow-2xl border border-slate-700/80 animate-in slide-in-from-bottom-4 duration-200">
+          <button
+            type="button"
+            onClick={() => {
+              try {
                 setBulkLocationAction('keep');
                 setBulkWarehouseId(warehouses.length === 1 ? warehouses[0]._id : (selectedWarehouse !== 'all' ? selectedWarehouse : ''));
                 setBulkClosetId('');
@@ -1561,22 +1718,30 @@ Podatki za preureditev:
                 setBulkCategory('Razno');
                 setBulkNewShelfName('');
                 setBulkEditModalOpen(true);
-              }}
-              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span>Uredi izbrane</span>
-            </button>
+              } catch (err) {
+                console.error('Error opening bulk edit modal:', err);
+              }
+            }}
+            className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs sm:text-sm font-bold rounded-full shadow-md flex items-center gap-2 cursor-pointer transition-all"
+          >
+            <Layers className="w-4 h-4 shrink-0" />
+            <span>Uredi ({selectedArticleIds.length})</span>
+          </button>
 
-            <button
-              type="button"
-              onClick={() => setSelectedArticleIds([])}
-              className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 cursor-pointer"
-              title="Počisti izbor"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => {
+              try {
+                setSelectedArticleIds([]);
+              } catch (err) {
+                console.error('Error clearing selection:', err);
+              }
+            }}
+            className="p-2 text-slate-300 hover:text-white hover:bg-slate-800 active:scale-90 rounded-full transition-all cursor-pointer mr-1"
+            title="Počisti izbor"
+          >
+            <X className="w-4 h-4 shrink-0" />
+          </button>
         </div>
       )}
 

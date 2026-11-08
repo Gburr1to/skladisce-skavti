@@ -5,19 +5,19 @@
 - Podatkovna baza (MongoDB): Ohrani se MongoDB kot primarna relacijska baza za artikle, lokacije (omare/police), izposoje in hitro delo z atributi/QR kodami.
 - Integracija z Google Drive / Excel: Excel služi za uvoz podatkov s terena v obstoječem stanju ter za varen arhiv/backup nazaj na Drive.
 
-- [IN PROGRESS] Pristop k Multi-select upravljanju in masovnemu urejanju (Arhitekturna odločitev):
+- [DONE] Pristop k Multi-select upravljanju in masovnemu urejanju:
   * Brez ločene podstrani za urejanje: Urejanje poteka neposredno na strani vseh artiklov, da uporabnik ohrani kontekst, filtre in iskalni niz.
   * Izbira artiklov: Kljukice ob vsakem artiklu + globalna kljukica "Izberi vse prikazane artikle".
-  * Plavajoča orodna vrstica (Floating Bulk Action Bar): Ob izbiri vsaj enega artikla se prikaže orodna vrstica s štetjem izbranih ("Izbranih: X artiklov"), gumbom "Uredi izbrane", gumbom "Izvozi izbrane v Excel" in gumbom "Počisti izbor".
+  * Kompakten plavajoči gumb (Floating Action Button): Ob izbiri artiklov se diskretno prikaže gumb "Uredi (X)" in gumb "×" za preklic izbora, prilagojen mobilnim napravam (nad spodnjo navigacijo).
   * Enoten modal "Uredi izbrane artikle" (Bulk Edit Modal):
     - Možnost delnega / selektivnega posodabljanja (Spremeni samo izbrana polja, ostala ostanejo nespremenjena):
-      1. Lokacija: "Pusti obstoječe", "Odstrani polico (brez lokacije)" ali izbira Omara -> Polica (z možnostjo hitrega dodajanja nove police).
+      1. Lokacija: "Pusti obstoječe", "Odstrani polico (brez lokacije)" ali filter Skladišče -> Omara -> Polica (z možnostjo hitrega dodajanja nove police).
       2. Skavtska veja: "Pusti obstoječe" ali izbira med Četa (IV), Klan (PP), Bobri (VV), Vodstvo, Vse veje itd.
       3. Kategorija: "Pusti obstoječe" ali izbira nove kategorije.
     - Enoten klic na backend API: `POST /article/batch-update` z `{ articleIds: [...], shelfId, branch, category }`.
   * Opcionalni podatki ob uvozu: Uvoz podatkov v obstoječem stanju (veja, količina in lokacija so opcijski ter se dodelijo naknadno z zgoraj opisanim multi-select orodjem).
 
-- [BACKEND READY] Varnost in vzdrževanje:
+- [DONE] Varnost in vzdrževanje:
   * Gumb "Počisti bazo / skladišče" v glavi strani.
   * Varnostni mehanizem z obvezno varnostno kopijo:
     1. Klik na gumb odpre varnostno opozorilno okno.
@@ -25,7 +25,24 @@
     3. Šele po uspešnem prenosu se odklene potrditev z vnosom varnostne besede "IZBRIŠI".
     4. Klic na backend `DELETE /article/all` za dokončen izbris.
 
-1.5. Popravimo uvoz in izvoz podatkov da bodo upoštevali tudi skladišča
+- [DONE] Uvoz in izvoz podatkov s polno podporo za skladišča:
+  * Uvoz Excel/CSV prepozna stolpec 'Skladišče' za vsak artikel posebej ter samodejno poišče ali ustvari skladišče na zaledju.
+  * Možnost izbire privzetega skladišča v uvoznem oknu za artikle, ki nimajo izrecno navedenega skladišča.
+  * Prikaz stolpca Skladišče v tabeli predogleda pred potrditvijo uvoza.
+  * Vzorec tabele za prenos (.xlsx) in AI poziv (prompt) vključujeta skladišče.
+  * Izvoz v Excel in Excel varnostna kopija vsebujeta stolpec z dejanskim imenom skladišča.
+
+
+Naj AI posodobi readme na spll strani po vsakem večjem updateu glede funkcionalnosti ali vizualnosti. Jaz pa dodam nove slike.
+
+
+- [DONE] Mobile UI:
+  * Skrčenje in razširjenje filtrov: Na mobilnem pogledu so filtri privzeto skrčeni (gumb "Filtri" z oznako števila aktivnih filtrov in chevron ikono), kar sprosti prostor za prikaz artiklov.
+  * Odstranjen podvojen gumb za preklic izbora nad artikli (število izbranih in preklic z gumbom 'X' že zagotavlja plavajoči gumb).
+  * Kompaktni artikli na mobilnem telefonu: Kartica artikla je skrčena in prikazuje le ime artikla z izbirnim poljem ter indikatorjem. S klikom na artikel se odprejo dodatne podrobnosti (zaloga, veja, kategorija, lokacija, gumb za izposojo).
+  * Plavajoči gumb "Uredi (X)": Postavljen na sredino spodnjega dela ekrana (nad spodnjo navigacijo), centriran za lahek dostop s prsti.
+
+
 
 2. Upravljanje računov in slike
 Povezava z računi in slikami: Vzpostavitev specifične mape na Drive-u za račune posameznih vej (Moji računi).   
