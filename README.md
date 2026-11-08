@@ -5,7 +5,7 @@
 - 🔄 **Sistem izposoj in vračil**
 - 🛒 **Nakupovalni seznam**
 - 🔑 **Skrbniki ključev za skladišča**
-- 🔒 **Varnost in avtentikacija**: Evidenco ključev ureja samo gospodar, email preverjanje
+- 🔒 **Varnost in avtentikacija**: En stegovski račun. Evidenco ključev urejate z geslom, ki naj ga nastavi gospodar/stegovodja, email preverjanje
 
 ---
 
