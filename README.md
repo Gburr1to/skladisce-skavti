@@ -70,10 +70,11 @@ Strežnik skrbi za shranjevanje podatkov, komunikacijo z bazo in prijave.
 4. Spodaj kliknite na **Environment Variables** (Okoljske spremenljivke) in dodajte:
    - `MONGO_URI` = *(vaš povezovalni niz (connection string) iz 2. koraka)*
    - `ACCESS_TOKEN_SECRET` = *(poljubno dolgo varno geslo ali naključno besedilo)*
-   - `GMAIL_USER` = *(stegovski Gmail naslov za pošiljanje varnostnih kod za menjavo gesla)*
-   - `GMAIL_PASS` = *(16-mestno App Password / geslo aplikacije iz vašega Google računa)*
+   - `SMTP_USER` = *(stegovski **Gmail** naslov, npr. vas.naslov@gmail.com)*
+   - `SMTP_PASS` = *(16-mestno App Password / geslo aplikacije iz vašega Google računa)*
 
-> 💡 *Kako pridobiti `GMAIL_PASS`: V vašem Google računu vklopite 2-stopenjsko preverjanje in na povezavi [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords) ustvarite novo geslo aplikacije (npr. z imenom "Skladisce").*
+> 💡 *Kako pridobiti `SMTP_PASS`: V vašem Google računu vklopite 2-stopenjsko preverjanje in na povezavi [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords) ustvarite novo geslo aplikacije (npr. z imenom "Skladisce").*
+> *(Opomba: Koda za Gmail samodejno nastavi `smtp.gmail.com` in vrata `587`, tako da ostalih polj iz `.env.example` ni treba ročno vpisovati).*
 5. Kliknite **Manual Deploy - deploy latest commit**. Počakajte nekaj minut, da se izpiše status *Live*, nato na vrhu strani kopirajte povezavo do svojega strežnika (npr. `https://skladisce-backend.onrender.com`).
 
 > How to deploy on render https://www.youtube.com/watch?v=A2VoUyZZMCw

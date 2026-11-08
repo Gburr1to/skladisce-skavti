@@ -42,7 +42,7 @@ Naj AI posodobi readme na spll strani po vsakem večjem updateu glede funkcional
   * Kompaktni artikli na mobilnem telefonu: Kartica artikla je skrčena in prikazuje le ime artikla z izbirnim poljem ter indikatorjem. S klikom na artikel se odprejo dodatne podrobnosti (zaloga, veja, kategorija, lokacija, gumb za izposojo).
   * Plavajoči gumb "Uredi (X)": Postavljen na sredino spodnjega dela ekrana (nad spodnjo navigacijo), centriran za lahek dostop s prsti.
 
-
+Za nove uporabnike: Moramo dodati nek osnovni skavtski račun v bazo. In navodilo, da stegič in gospodar določita geslo za ključe.
 
 2. Upravljanje računov in slike
 Povezava z računi in slikami: Vzpostavitev specifične mape na Drive-u za račune posameznih vej (Moji računi).   
