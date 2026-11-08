@@ -75,7 +75,7 @@ module.exports = {
                     // Če je skladišče prvo/edino, zajamemo tudi morebitne stare omare z null
                     { warehouse: null }
                 ]
-            }).sort({ name: 1 });
+            }).populate('warehouse').sort({ name: 1 });
             return res.json(closets);
         } catch (err) {
             return res.status(500).json({

@@ -110,12 +110,16 @@ export const api = {
     request(`/article/${id}`),
   createArticle: (data) => 
     request('/article', { method: 'POST', body: JSON.stringify(data) }),
-  batchImportArticles: (items) =>
-    request('/article/batch', { method: 'POST', body: JSON.stringify({ items }) }),
+  batchImportArticles: (items, defaultWarehouseId) => 
+    request('/article/batch', { method: 'POST', body: JSON.stringify({ items, defaultWarehouseId }) }),
   updateArticle: (id, data) => 
     request(`/article/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteArticle: (id) => 
     request(`/article/${id}`, { method: 'DELETE' }),
+  deleteAllArticles: () =>
+    request('/article/all', { method: 'DELETE' }),
+  batchUpdateArticles: (data) =>
+    request('/article/batch-update', { method: 'POST', body: JSON.stringify(data) }),
   generateQR: (id) => 
     request(`/article/${id}/generate-qr`, { method: 'POST' }),
   getByQR: (code) => 

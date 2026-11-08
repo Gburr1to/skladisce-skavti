@@ -1,28 +1,47 @@
-Spreminjanje gesla mora posalti na email neko preverjanje (kodo), ki jo moraš vpisati, da vemo da je oseba zares z dostopom do tega emaila. In možnost menjave gesla.
+[DONE] Spreminjanje gesla mora posalti na email neko preverjanje (kodo), ki jo moraš vpisati, da vemo da je oseba zares z dostopom do tega emaila. In možnost menjave gesla.
+(git commit: "added email auth" - Gmail SMTP preverjen in delujoč)
 
-git commit -m "added email auth"
+1. Podatkovna baza in integracija z Google Drive / Excel (Hibridni model)
+- Podatkovna baza (MongoDB): Ohrani se MongoDB kot primarna relacijska baza za artikle, lokacije (omare/police), izposoje in hitro delo z atributi/QR kodami.
+- Integracija z Google Drive / Excel: Excel služi za uvoz podatkov s terena v obstoječem stanju ter za varen arhiv/backup nazaj na Drive.
 
-1. Podatkovna baza in integracija z Google Drive (MCP)
-Povezava preko MCP (Model Context Protocol):Vzpostavitev MCP povezave z Excel datotekami na Google Drive, da se izognemo uporabi podatkovne baze (npr. MongoDB) – vse ostane na Drive-u.   
-Implementacija uvoza podatkov: vlečenje informacij direktno iz Drive-a, uvoz v obstoječem stanju, nato pa v aplikaciji dodajanje manjkajočih podatkov.   
-Upravljanje podatkov o artiklih:Najprej se ustvarijo police (lokacije), nato se jih z multi-select funkcijo dodeljuje posameznim artiklom.   Opcionalni podatki pri uvozu (veja, količina, lokacija), saj se jih lahko doda naknadno v splošni strani.   
-Varnost in vzdrževanje:Implementacija gumba za brisanje vseh artiklov iz skladišča, ki pa obvezno najprej avtomatsko naloži varnostno kopijo (backup) podatkov.   
+- [IN PROGRESS] Pristop k Multi-select upravljanju in masovnemu urejanju (Arhitekturna odločitev):
+  * Brez ločene podstrani za urejanje: Urejanje poteka neposredno na strani vseh artiklov, da uporabnik ohrani kontekst, filtre in iskalni niz.
+  * Izbira artiklov: Kljukice ob vsakem artiklu + globalna kljukica "Izberi vse prikazane artikle".
+  * Plavajoča orodna vrstica (Floating Bulk Action Bar): Ob izbiri vsaj enega artikla se prikaže orodna vrstica s štetjem izbranih ("Izbranih: X artiklov"), gumbom "Uredi izbrane", gumbom "Izvozi izbrane v Excel" in gumbom "Počisti izbor".
+  * Enoten modal "Uredi izbrane artikle" (Bulk Edit Modal):
+    - Možnost delnega / selektivnega posodabljanja (Spremeni samo izbrana polja, ostala ostanejo nespremenjena):
+      1. Lokacija: "Pusti obstoječe", "Odstrani polico (brez lokacije)" ali izbira Omara -> Polica (z možnostjo hitrega dodajanja nove police).
+      2. Skavtska veja: "Pusti obstoječe" ali izbira med Četa (IV), Klan (PP), Bobri (VV), Vodstvo, Vse veje itd.
+      3. Kategorija: "Pusti obstoječe" ali izbira nove kategorije.
+    - Enoten klic na backend API: `POST /article/batch-update` z `{ articleIds: [...], shelfId, branch, category }`.
+  * Opcionalni podatki ob uvozu: Uvoz podatkov v obstoječem stanju (veja, količina in lokacija so opcijski ter se dodelijo naknadno z zgoraj opisanim multi-select orodjem).
+
+- [BACKEND READY] Varnost in vzdrževanje:
+  * Gumb "Počisti bazo / skladišče" v glavi strani.
+  * Varnostni mehanizem z obvezno varnostno kopijo:
+    1. Klik na gumb odpre varnostno opozorilno okno.
+    2. Pred izbrisom se OBVEZNO avtomatsko generira in prenese Excel varnostna kopija vseh trenutnih artiklov (`Varnostna_kopija_vsi_artikli_YYYY-MM-DD.xlsx`).
+    3. Šele po uspešnem prenosu se odklene potrditev z vnosom varnostne besede "IZBRIŠI".
+    4. Klic na backend `DELETE /article/all` za dokončen izbris.
+
+1.5. Popravimo uvoz in izvoz podatkov da bodo upoštevali tudi skladišča
 
 2. Upravljanje računov in slike
-Povezava z računi in slikami:Vzpostavitev specifične mape na Drive-u za račune posameznih vej (Moji računi).   
-Omogočiti prenos slik računov in vnos podatkov v tabelo računov.   Varnostna omejitev pisanja: Aplikacija naj ureja/vnaša samo specifične podatke, ki jih želiš (vnaša v tabelo, ne briše in ne spreminja obstoječih polj, če je to mogoče).   
-Uporabniški vmesnik (UI) za račune:Seznam računov z informacijami: možnost izbire računa, dodajanja manjkajočih info in samodejno urejanje v Excelu.   
+Povezava z računi in slikami: Vzpostavitev specifične mape na Drive-u za račune posameznih vej (Moji računi).   
+Omogočiti prenos slik računov in vnos podatkov v tabelo računov. Varnostna omejitev pisanja: Aplikacija naj ureja/vnaša samo specifične podatke, ki jih želiš (vnaša v tabelo, ne briše in ne spreminja obstoječih polj, če je to mogoče).   
+Uporabniški vmesnik (UI) za račune: Seznam računov z informacijami: možnost izbire računa, dodajanja manjkajočih info in samodejno urejanje v Excelu.   
 Indikator opozorila: Prikaz rdečega klicaja, če račun nima vseh zahtevanih informacij.   
 Poseben razdelek: Komu je treba vrnit denar.   
 Nastavljive poti: Gumb za ogled in spreminjanje konfiguracije / poti do map z računi na Google Drive.   
 
 3. WhatsApp & AI Integracija (Workflow za prepoznavanje računov) - najprej na spl strani možnost urejanja računov, potem pa ai bot.
-WhatsApp / Messenger Bot:Posodobitev aplikacije (App update) z AI MCP, da lahko botu preko telefona/messengerja poveš, kaj si kupil, katera veja (persistent memory v kateri veji si), kateri tabor/dogodek ... da se to označi na strani.   
+WhatsApp / Messenger Bot: Posodobitev aplikacije (App update) z AI MCP, da lahko botu preko telefona/messengerja poveš, kaj si kupil, katera veja (persistent memory v kateri veji si), kateri tabor/dogodek ... da se to označi na strani.   
 Workflow za slikanje računa: bot sliko uploada v mapo slik računov ter avtomatsko izvleče in vnese podatke v tabelo.   
-Tehnične optimizacije za AI:Vzpostavitev seznama brezplačnih API ključev za AI.   
-Implementacija samodejnega preklapljanja med API ključi (na drug račun s svežimi tokeni), ko je trenutni ključ blizu porabe.   Uporaba brezplačnih AI agentov za razmišljanje, prenos podatkov v splošno stran in pretvorbo v JSON format.   
+Tehnične optimizacije za AI: Vzpostavitev seznama brezplačnih API ključev za AI.   
+Implementacija samodejnega preklapljanja med API ključi (na drug račun s svežimi tokeni), ko je trenutni ključ blizu porabe. Uporaba brezplačnih AI agentov za razmišljanje, prenos podatkov v splošno stran in pretvorbo v JSON format.   
 Prestreganje JSON struktur iz tabele za uvoz podatkov (ne glede na vrstni red).   
 
 4. Uporabniki, dostopi in UI nastavitve
-Sistem uporabnikov in vej:Možnost več uporabnikov, kjer ima vsak dostop do podatkov svoje veje, ali implementacija filtriranja podatkov glede na izbrano vejo.   
-Prilagoditev vmesnika:Dodana možnost spreminjanja teme uporabniškega vmesnika (UI theme switcher).  
+Sistem uporabnikov in vej: Možnost več uporabnikov, kjer ima vsak dostop do podatkov svoje veje, ali implementacija filtriranja podatkov glede na izbrano vejo.   
+Prilagoditev vmesnika: Dodana možnost spreminjanja teme uporabniškega vmesnika (UI theme switcher).

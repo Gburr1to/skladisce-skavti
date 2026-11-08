@@ -179,6 +179,47 @@ router.post('/:id/generate-qr', articleController.generateQR);
  *       404:
  *         description: Artikel ne obstaja
  */
+/**
+ * @swagger
+ * /article/batch-update:
+ *   post:
+ *     summary: Masovno posodabljanje več artiklov hkrati (multi-select dodeljevanje polic/veje)
+ *     tags: [Articles]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               articleIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               shelfId:
+ *                 type: string
+ *               branch:
+ *                 type: string
+ *               category:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Število posodobljenih artiklov
+ */
+router.post('/batch-update', articleController.batchUpdate);
+
+/**
+ * @swagger
+ * /article/all:
+ *   delete:
+ *     summary: Izbriše VSE artikle iz skladišča (z obvezno predhodno varnostno kopijo na frontendu)
+ *     tags: [Articles]
+ *     responses:
+ *       200:
+ *         description: Vsi artikli uspešno izbrisani
+ */
+router.delete('/all', articleController.removeAll);
+
 router.put('/:id', articleController.update);
 
 /**

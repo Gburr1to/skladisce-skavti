@@ -7,7 +7,14 @@ module.exports = {
      */
     list: async function (req, res) {
         try {
-            const shelves = await ShelfModel.find().populate('closet').sort({ name: 1 });
+            const filter = {};
+            if (req.query.closet) {
+                filter.closet = req.query.closet;
+            }
+            const shelves = await ShelfModel.find(filter).populate({
+                path: 'closet',
+                populate: { path: 'warehouse' }
+            }).sort({ name: 1 });
             return res.json(shelves);
         } catch (err) {
             return res.status(500).json({
@@ -22,7 +29,10 @@ module.exports = {
      */
     show: async function (req, res) {
         try {
-            const shelf = await ShelfModel.findById(req.params.id).populate('closet');
+            const shelf = await ShelfModel.findById(req.params.id).populate({
+                path: 'closet',
+                populate: { path: 'warehouse' }
+            });
             if (!shelf) {
                 return res.status(404).json({ message: 'Polica ne obstaja.' });
             }
@@ -63,7 +73,10 @@ module.exports = {
                 closet: req.body.closet || null
             });
             const savedShelf = await shelf.save();
-            const populatedShelf = await ShelfModel.findById(savedShelf._id).populate('closet');
+            const populatedShelf = await ShelfModel.findById(savedShelf._id).populate({
+                path: 'closet',
+                populate: { path: 'warehouse' }
+            });
             return res.status(201).json(populatedShelf);
         } catch (err) {
             return res.status(500).json({
@@ -88,7 +101,10 @@ module.exports = {
                     closet: req.body.closet
                 },
                 { new: true, runValidators: true }
-            ).populate('closet');
+            ).populate({
+                path: 'closet',
+                populate: { path: 'warehouse' }
+            });
 
             if (!updatedShelf) {
                 return res.status(404).json({ message: 'Polica ne obstaja.' });

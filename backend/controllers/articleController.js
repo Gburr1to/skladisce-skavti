@@ -33,7 +33,7 @@ module.exports = {
             const articles = await ArticleModel.find(filter)
                 .populate({
                     path: 'shelf',
-                    populate: { path: 'closet' }
+                    populate: { path: 'closet', populate: { path: 'warehouse' } }
                 })
                 .sort({ name: 1 });
             return res.json(articles);
@@ -74,7 +74,7 @@ module.exports = {
 
             const articles = await ArticleModel.find(filter).populate({
                 path: 'shelf',
-                populate: { path: 'closet' }
+                populate: { path: 'closet', populate: { path: 'warehouse' } }
             }).sort({ name: 1 });
 
             return res.json(articles);
@@ -94,7 +94,7 @@ module.exports = {
             const article = await ArticleModel.findById(req.params.id)
                 .populate({
                     path: 'shelf',
-                    populate: { path: 'closet' }
+                    populate: { path: 'closet', populate: { path: 'warehouse' } }
                 });
 
             if (!article) {
@@ -118,7 +118,7 @@ module.exports = {
             const article = await ArticleModel.findOne({ qr: qrCode })
                 .populate({
                     path: 'shelf',
-                    populate: { path: 'closet' }
+                    populate: { path: 'closet', populate: { path: 'warehouse' } }
                 });
 
             if (!article) {
@@ -162,7 +162,7 @@ module.exports = {
 
             const savedArticle = await article.save();
             const populated = await ArticleModel.findById(savedArticle._id)
-                .populate({ path: 'shelf', populate: { path: 'closet' } });
+                .populate({ path: 'shelf', populate: { path: 'closet', populate: { path: 'warehouse' } } });
 
             return res.status(201).json(populated);
         } catch (err) {
@@ -219,14 +219,25 @@ module.exports = {
             }
 
             // Zagotovimo privzeto skladišče, če je potrebno ustvariti nove omare
-            let defaultWarehouse = await WarehouseModel.findOne();
-            if (!defaultWarehouse) {
-                defaultWarehouse = new WarehouseModel({
+            const defaultWarehouseId = req.body.defaultWarehouseId || null;
+            let fallbackWarehouse = null;
+            if (defaultWarehouseId) {
+                fallbackWarehouse = await WarehouseModel.findById(defaultWarehouseId);
+            }
+            if (!fallbackWarehouse) {
+                fallbackWarehouse = await WarehouseModel.findOne();
+            }
+            if (!fallbackWarehouse) {
+                fallbackWarehouse = new WarehouseModel({
                     name: 'Glavno skladišče',
                     location: 'Sedež stegnja'
                 });
-                await defaultWarehouse.save();
+                await fallbackWarehouse.save();
             }
+
+            const warehouseCache = new Map();
+            warehouseCache.set(String(fallbackWarehouse._id), fallbackWarehouse._id);
+            warehouseCache.set(fallbackWarehouse.name.toLowerCase(), fallbackWarehouse._id);
 
             const closetCache = new Map();
             const shelfCache = new Map();
@@ -236,23 +247,52 @@ module.exports = {
             for (const item of validItems) {
                 let shelfId = item.shelf || null;
 
+                // Določitev ciljnega skladišča za artikel / omaro
+                const rawWhName = item.warehouseName ? String(item.warehouseName).trim() : '';
+                const rawWhId = item.warehouse ? String(item.warehouse).trim() : '';
+                let targetWarehouseId = fallbackWarehouse._id;
+
+                if (rawWhName) {
+                    let cachedWhId = warehouseCache.get(rawWhName.toLowerCase());
+                    if (!cachedWhId) {
+                        let existingWh = await WarehouseModel.findOne({ name: new RegExp(`^${rawWhName}$`, 'i') });
+                        if (!existingWh) {
+                            existingWh = new WarehouseModel({
+                                name: rawWhName,
+                                location: ''
+                            });
+                            await existingWh.save();
+                        }
+                        cachedWhId = existingWh._id;
+                        warehouseCache.set(rawWhName.toLowerCase(), cachedWhId);
+                        warehouseCache.set(String(cachedWhId), cachedWhId);
+                    }
+                    targetWarehouseId = cachedWhId;
+                } else if (rawWhId) {
+                    targetWarehouseId = rawWhId;
+                }
+
                 // Če ima vrstica podani imeni omare in police, poiščemo ali avtomatsko ustvarimo
                 const closetName = item.closetName ? String(item.closetName).trim() : '';
                 const shelfName = item.shelfName ? String(item.shelfName).trim() : '';
 
                 if (!shelfId && closetName) {
-                    let closetId = closetCache.get(closetName.toLowerCase());
+                    const closetKey = `${targetWarehouseId}_${closetName.toLowerCase()}`;
+                    let closetId = closetCache.get(closetKey);
                     if (!closetId) {
-                        let existingCloset = await ClosetModel.findOne({ name: new RegExp(`^${closetName}$`, 'i') });
+                        let existingCloset = await ClosetModel.findOne({
+                            warehouse: targetWarehouseId,
+                            name: new RegExp(`^${closetName}$`, 'i')
+                        });
                         if (!existingCloset) {
                             existingCloset = new ClosetModel({
                                 name: closetName,
-                                warehouse: defaultWarehouse._id
+                                warehouse: targetWarehouseId
                             });
                             await existingCloset.save();
                         }
                         closetId = existingCloset._id;
-                        closetCache.set(closetName.toLowerCase(), closetId);
+                        closetCache.set(closetKey, closetId);
                     }
 
                     if (shelfName) {
@@ -372,7 +412,7 @@ module.exports = {
                 req.params.id,
                 updateData,
                 { new: true, runValidators: true }
-            ).populate({ path: 'shelf', populate: { path: 'closet' } });
+            ).populate({ path: 'shelf', populate: { path: 'closet', populate: { path: 'warehouse' } } });
 
             if (!updatedArticle) {
                 return res.status(404).json({ message: 'Artikel ne obstaja.' });
@@ -399,6 +439,63 @@ module.exports = {
         } catch (err) {
             return res.status(500).json({
                 message: 'Napaka pri brisanju artikla.',
+                error: err.message
+            });
+        }
+    },
+
+    /**
+     * Izbriše vse artikle iz skladišča (ponastavitev kataloga z obvezno predhodno varnostno kopijo)
+     */
+    removeAll: async function (req, res) {
+        try {
+            const count = await ArticleModel.countDocuments();
+            await ArticleModel.deleteMany({});
+            return res.status(200).json({ 
+                message: `Uspešno izbrisanih vseh ${count} artiklov iz skladišča.`,
+                deletedCount: count 
+            });
+        } catch (err) {
+            return res.status(500).json({
+                message: 'Napaka pri brisanju vseh artiklov.',
+                error: err.message
+            });
+        }
+    },
+
+    /**
+     * Masovno posodabljanje artiklov (multi-select dodeljevanje polic/omare ali veje)
+     */
+    batchUpdate: async function (req, res) {
+        try {
+            const { articleIds, shelfId, branch, category } = req.body;
+            if (!Array.isArray(articleIds) || articleIds.length === 0) {
+                return res.status(400).json({ message: 'Ni podanih artiklov za posodobitev.' });
+            }
+
+            const updateData = {};
+            if (shelfId !== undefined) {
+                updateData.shelf = shelfId || null;
+            }
+            if (branch !== undefined) {
+                updateData.branch = branch;
+            }
+            if (category !== undefined) {
+                updateData.category = category;
+            }
+
+            const result = await ArticleModel.updateMany(
+                { _id: { $in: articleIds } },
+                { $set: updateData }
+            );
+
+            return res.status(200).json({
+                message: `Uspešno posodobljenih ${result.modifiedCount} artiklov.`,
+                modifiedCount: result.modifiedCount
+            });
+        } catch (err) {
+            return res.status(500).json({
+                message: 'Napaka pri masovnem posodabljanju artiklov.',
                 error: err.message
             });
         }
