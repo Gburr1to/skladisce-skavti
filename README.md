@@ -34,8 +34,6 @@
 
 ### Zaženi svojo aplikacijo na spletu brezplačno
 
-Aplikacijo lahko brezplačno postavi vsak skavtski steg v približno 10–15 minutah brez programiranja. Potrebujete le 4 preproste korake:
-
 ---
 
 #### 1. Kopiraj projekt na svoj račun (GitHub Fork)
