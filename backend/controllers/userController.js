@@ -488,23 +488,50 @@ module.exports = {
     },
 
     /**
+     * Checks if any user profile exists in the database (initial troop setup check).
+     */
+    setupStatus: async function (req, res) {
+        try {
+            const count = await UserModel.countDocuments();
+            return res.json({
+                hasUsers: count > 0,
+                count
+            });
+        } catch (err) {
+            return res.status(500).json({
+                message: 'Napaka pri preverjanju začetne nastavitve profila.',
+                error: err.message
+            });
+        }
+    },
+
+    /**
      * Ustvari novega uporabnika (registracija)
+     * Dovoljeno le za začetni profil (ko v bazi še ni nobenega profila).
      */
     create: async function (req, res) {
         try {
-            const { username, password, picture } = req.body;
+            const { username, password, email, picture } = req.body;
             if (!username || !password) {
                 return res.status(400).json({ message: 'Uporabniško ime in geslo sta obvezna.' });
             }
 
-            const existingUser = await UserModel.findOne({ username });
+            const existingCount = await UserModel.countDocuments();
+            if (existingCount > 0) {
+                return res.status(403).json({
+                    message: 'Začetni profil stega je že ustvarjen. Dodatna registracija ni dovoljena.'
+                });
+            }
+
+            const existingUser = await UserModel.findOne({ username: username.trim() });
             if (existingUser) {
                 return res.status(400).json({ message: 'Uporabnik s tem imenom že obstaja.' });
             }
 
             const user = new UserModel({
-                username,
-                password,
+                username: username.trim(),
+                password: password.trim(),
+                email: email ? email.trim().toLowerCase() : '',
                 picture: picture || ''
             });
 
@@ -516,6 +543,166 @@ module.exports = {
         } catch (err) {
             return res.status(500).json({
                 message: 'Napaka pri ustvarjanju uporabnika.',
+                error: err.message
+            });
+        }
+    },
+
+    /**
+     * Zahteva za ponastavitev gesla (pošlje kodo na registrirani stegovski email).
+     */
+    requestUserPasswordReset: async function (req, res) {
+        try {
+            const { username } = req.body;
+            let user = null;
+
+            if (username && username.trim()) {
+                user = await UserModel.findOne({ username: username.trim() });
+            } else {
+                user = await UserModel.findOne();
+            }
+
+            if (!user) {
+                return res.status(404).json({ message: 'Profil stega ni bil najden.' });
+            }
+
+            if (!user.email) {
+                return res.status(400).json({ 
+                    message: 'Za ta profil ni nastavljen e-poštni naslov za obnovitev. Obrnite se na skrbnika strežnika.' 
+                });
+            }
+
+            const code = Math.floor(100000 + Math.random() * 900000).toString();
+            user.resetCode = code;
+            user.resetCodeExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
+            await user.save();
+
+            await sendResetCodeEmail(user.email, code, 'ponastavitev gesla stega za prijavo v Skavtsko skladišče');
+
+            return res.json({
+                message: `Varnostna koda je bila poslana na naslov ${maskEmail(user.email)}.`,
+                emailMasked: maskEmail(user.email),
+                username: user.username,
+                devCode: process.env.NODE_ENV !== 'production' ? code : undefined
+            });
+        } catch (err) {
+            return res.status(500).json({
+                message: 'Napaka pri zahtevi za ponastavitev gesla.',
+                error: err.message
+            });
+        }
+    },
+
+    /**
+     * Ponastavitev gesla z vnosom kode.
+     */
+    resetUserPassword: async function (req, res) {
+        try {
+            const { code, newPassword, username } = req.body;
+
+            if (!code || !newPassword || !newPassword.trim()) {
+                return res.status(400).json({ message: 'Varnostna koda in novo geslo sta obvezna.' });
+            }
+
+            let user = null;
+            if (username && username.trim()) {
+                user = await UserModel.findOne({ username: username.trim() });
+            } else {
+                user = await UserModel.findOne();
+            }
+
+            if (!user || !user.resetCode || !user.resetCodeExpiresAt) {
+                return res.status(400).json({ message: 'Zahteva za ponastavitev ni bila sprožena ali je že bila uporabljena.' });
+            }
+
+            if (new Date() > user.resetCodeExpiresAt) {
+                return res.status(400).json({ message: 'Varnostna koda je potekla. Zahtevajte novo.' });
+            }
+
+            if (String(code).trim() !== String(user.resetCode).trim()) {
+                return res.status(400).json({ message: 'Napačna varnostna koda.' });
+            }
+
+            user.password = newPassword.trim();
+            user.resetCode = null;
+            user.resetCodeExpiresAt = null;
+            await user.save();
+
+            return res.json({ message: 'Geslo stega je bilo uspešno ponastavljeno. Sedaj se lahko prijavite z novim geslom.' });
+        } catch (err) {
+            return res.status(500).json({
+                message: 'Napaka pri ponastavitvi gesla.',
+                error: err.message
+            });
+        }
+    },
+
+    /**
+     * Menjava stegovskega e-poštnega naslova (zahteva prijavo in trenutno geslo).
+     */
+    changeEmail: async function (req, res) {
+        try {
+            const { newEmail, currentPassword } = req.body;
+
+            if (!newEmail || !newEmail.trim()) {
+                return res.status(400).json({ message: 'Nov e-poštni naslov je obvezen.' });
+            }
+
+            if (!currentPassword) {
+                return res.status(400).json({ message: 'Za spremembo e-pošte morate vnesti trenutno geslo.' });
+            }
+
+            const user = await UserModel.findById(req.user.id);
+            if (!user) {
+                return res.status(404).json({ message: 'Uporabnik ne obstaja.' });
+            }
+
+            if (String(currentPassword).trim() !== String(user.password).trim()) {
+                return res.status(401).json({ message: 'Napačno trenutno geslo.' });
+            }
+
+            user.email = newEmail.trim().toLowerCase();
+            await user.save();
+
+            return res.json({
+                message: 'E-poštni naslov stega je bil uspešno posodobljen.',
+                email: user.email
+            });
+        } catch (err) {
+            return res.status(500).json({
+                message: 'Napaka pri menjavi e-poštnega naslova.',
+                error: err.message
+            });
+        }
+    },
+
+    /**
+     * Menjava stegovskega gesla (zahteva prijavo in trenutno geslo).
+     */
+    changePassword: async function (req, res) {
+        try {
+            const { currentPassword, newPassword } = req.body;
+
+            if (!currentPassword || !newPassword || !newPassword.trim()) {
+                return res.status(400).json({ message: 'Trenutno in novo geslo sta obvezna.' });
+            }
+
+            const user = await UserModel.findById(req.user.id);
+            if (!user) {
+                return res.status(404).json({ message: 'Uporabnik ne obstaja.' });
+            }
+
+            if (String(currentPassword).trim() !== String(user.password).trim()) {
+                return res.status(401).json({ message: 'Napačno trenutno geslo.' });
+            }
+
+            user.password = newPassword.trim();
+            await user.save();
+
+            return res.json({ message: 'Geslo stega je bilo uspešno posodobljeno.' });
+        } catch (err) {
+            return res.status(500).json({
+                message: 'Napaka pri menjavi gesla.',
                 error: err.message
             });
         }

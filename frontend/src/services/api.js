@@ -43,6 +43,18 @@ export const api = {
   // Auth
   login: (username, password) => 
     request('/users/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
+  getSetupStatus: () => 
+    request('/users/setup-status'),
+  registerInitialProfile: (username, password, email) => 
+    request('/users/register', { method: 'POST', body: JSON.stringify({ username, password, email }) }),
+  requestPasswordReset: (username) => 
+    request('/users/request-password-reset', { method: 'POST', body: JSON.stringify({ username }) }),
+  resetPassword: (code, newPassword, username) => 
+    request('/users/reset-password', { method: 'POST', body: JSON.stringify({ code, newPassword, username }) }),
+  changeEmail: (newEmail, currentPassword) => 
+    request('/users/change-email', { method: 'PUT', body: JSON.stringify({ newEmail, currentPassword }) }),
+  changePassword: (currentPassword, newPassword) => 
+    request('/users/change-password', { method: 'PUT', body: JSON.stringify({ currentPassword, newPassword }) }),
   getProfile: () => 
     request('/users/profile'),
   logout: () => 

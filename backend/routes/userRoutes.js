@@ -41,6 +41,11 @@ const { authenticateToken } = require('../middleware/authMiddleware.js');
  *         description: Napaka strežnika pri prijavi, na primer manjkajoča JWT skrivnost ali nedosegljiva baza
  */
 router.post('/login', userController.login);
+router.get('/setup-status', userController.setupStatus);
+router.post('/request-password-reset', userController.requestUserPasswordReset);
+router.post('/reset-password', userController.resetUserPassword);
+router.put('/change-email', authenticateToken, userController.changeEmail);
+router.put('/change-password', authenticateToken, userController.changePassword);
 
 /**
  * @swagger

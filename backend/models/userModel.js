@@ -10,6 +10,18 @@ const userSchema = new Schema({
     password: { 
         type: String, 
         required: [true, 'Geslo je obvezno'] 
+    },
+    email: {
+        type: String,
+        default: ''
+    },
+    resetCode: {
+        type: String,
+        default: null
+    },
+    resetCodeExpiresAt: {
+        type: Date,
+        default: null
     }
 }, { 
     timestamps: true 

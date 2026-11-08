@@ -7,13 +7,15 @@ const nodemailer = require('nodemailer');
  * 
  * @param {string} to - Recipient email address
  * @param {string} code - 6-digit verification code
+ * @param {string} contextText - Description of the action (e.g. 'ponastavitev gesla stega')
  * @returns {Promise<boolean>}
  */
-async function sendResetCodeEmail(to, code) {
+async function sendResetCodeEmail(to, code, contextText = 'ponastavitev gesla za Skavtsko skladišče') {
     try {
         console.log('====================================================');
         console.log(`[EMAIL SERVICE] Sending reset code to: ${to}`);
         console.log(`[EMAIL SERVICE] Security code: ${code}`);
+        console.log(`[EMAIL SERVICE] Context: ${contextText}`);
         console.log('====================================================');
 
         const smtpUser = process.env.SMTP_USER || process.env.GMAIL_USER;
@@ -48,11 +50,11 @@ async function sendResetCodeEmail(to, code) {
                 from: process.env.SMTP_FROM || `"Skavtsko skladišče" <${smtpUser}>`,
                 to,
                 subject: 'Varnostna koda za ponastavitev gesla - Skavtsko skladišče',
-                text: `Vaša enkratna varnostna koda za ponastavitev gesla skladišča je: ${code}\n\nKoda je veljavna 15 minut.`,
+                text: `Vaša enkratna varnostna koda za ${contextText} je: ${code}\n\nKoda je veljavna 15 minut.`,
                 html: `
                     <div style="font-family: sans-serif; padding: 20px; color: #1e293b;">
                         <h2 style="color: #065f46;">Skavtsko skladišče - Ponastavitev gesla</h2>
-                        <p>Prejeli smo vašo zahtevo za ponastavitev gesla za urejanje imetnikov ključa.</p>
+                        <p>Prejeli smo vašo zahtevo za ${contextText}.</p>
                         <p>Vaša enkratna varnostna koda za preverjanje je:</p>
                         <div style="background: #f1f5f9; padding: 15px; border-radius: 10px; font-size: 28px; font-weight: bold; letter-spacing: 5px; text-align: center; color: #0f172a; margin: 20px 0;">
                             ${code}

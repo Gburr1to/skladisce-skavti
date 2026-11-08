@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useBorrow } from '../context/BorrowContext';
 import SearchBar from './SearchBar';
 import BorrowModal from './BorrowModal';
+import SettingsModal from './SettingsModal';
 import { 
   Archive, 
   Package, 
@@ -11,6 +12,7 @@ import {
   ShoppingCart,
   Key,
   LogOut, 
+  Settings,
   CheckCircle2, 
   AlertCircle
 } from 'lucide-react';
@@ -18,6 +20,7 @@ import {
 export default function Layout({ children }) {
   const { logout } = useAuth();
   const { activeBorrows, toastMessage } = useBorrow();
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -79,26 +82,46 @@ export default function Layout({ children }) {
               })}
 
               <button
+                onClick={() => setSettingsOpen(true)}
+                title="Nastavitve profila stega"
+                className="p-1.5 text-emerald-200 hover:text-white hover:bg-emerald-800 rounded-lg ml-1 cursor-pointer transition-colors"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+
+              <button
                 onClick={handleLogout}
                 title="Odjava"
-                className="p-1.5 text-emerald-200 hover:text-white hover:bg-emerald-800 rounded-lg ml-1"
+                className="p-1.5 text-emerald-200 hover:text-white hover:bg-emerald-800 rounded-lg cursor-pointer transition-colors"
               >
                 <LogOut className="w-4 h-4" />
               </button>
             </nav>
 
-            {/* Odjava na mobilnih napravah */}
-            <button
-              onClick={handleLogout}
-              title="Odjava"
-              className="md:hidden p-1.5 text-emerald-200 hover:text-white rounded-lg shrink-0"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+            {/* Orodja v glavi na mobilnih napravah */}
+            <div className="md:hidden flex items-center gap-1 shrink-0">
+              <button
+                onClick={() => setSettingsOpen(true)}
+                title="Nastavitve profila stega"
+                className="p-1.5 text-emerald-200 hover:text-white rounded-lg cursor-pointer transition-colors"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+              <button
+                onClick={handleLogout}
+                title="Odjava"
+                className="p-1.5 text-emerald-200 hover:text-white rounded-lg cursor-pointer transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
 
           </div>
         </div>
       </header>
+
+      {/* Globalne nastavitve profila stega */}
+      <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
       {/* Toast obvestilo */}
       {toastMessage && (
